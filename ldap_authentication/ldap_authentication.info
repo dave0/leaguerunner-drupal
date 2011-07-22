@@ -1,24 +1,10 @@
-; $Id: ldap_authentication.info,v 1.1.4.2 2011/02/08 06:01:00 johnbarclay Exp $
-name = LDAP Authentication
-description = "Implements LDAP authentication"
-package = "Lightweight Directory Access Protocol"
-dependencies[] = ldap_servers
+name = Leaguerunner Authentication
+description = "Implements Leaguerunner authentication"
+package = "Leaguerunner"
+;dependencies[] = 
 core = 7.x
-configure = admin/config/people/ldap/authentication
-files[] = LdapAuthenticationConf.class.php
-files[] = LdapAuthenticationConfAdmin.class.php
+configure = admin/config/people/leaguerunner/authentication
+files[] = leaguerunner_authentication.module
+files[] = leaguerunner_authentication.install
 
-files[] = ldap_authentication.module
-files[] = ldap_authentication.install
-files[] = ldap_authentication.theme.inc
-files[] = ldap_authentication.admin.inc
-
-
-features[variable][] = "ldap_authentication_conf"
-
-; Information added by drupal.org packaging script on 2011-05-27
-version = "7.x-1.0-beta1"
-core = "7.x"
-project = "ldap"
-datestamp = "1306479733"
-
+; features[variable][] = "leaguerunner_authentication_conf"
