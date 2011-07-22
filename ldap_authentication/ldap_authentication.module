@@ -12,77 +12,11 @@
  */
 define('LDAP_AUTHENTICATION_PROJECT_TAG', 'ldap');
 
-define('LDAP_AUTHENTICATION_MIXED',        1);
-define('LDAP_AUTHENTICATION_EXCLUSIVE',    2);
-define('LDAP_AUTHENTICATION_MODE_DEFAULT', 1);
-
-define('LDAP_AUTHENTICATION_CONFLICT_LOG',             1);
-define('LDAP_AUTHENTICATION_CONFLICT_RESOLVE',         2);
-define('LDAP_AUTHENTICATION_CONFLICT_RESOLVE_DEFAULT', 2);
-
-define('LDAP_AUTHENTICATION_EMAIL_UPDATE_ON_LDAP_CHANGE_ENABLE_NOTIFY',  1);
-define('LDAP_AUTHENTICATION_EMAIL_UPDATE_ON_LDAP_CHANGE_ENABLE',         2);
-define('LDAP_AUTHENTICATION_EMAIL_UPDATE_ON_LDAP_CHANGE_DISABLE',        3);
-define('LDAP_AUTHENTICATION_EMAIL_UPDATE_ON_LDAP_CHANGE_DEFAULT',        1);
-
-define('LDAP_AUTHENTICATION_RESULT_FAIL_CONNECT',      1);
-define('LDAP_AUTHENTICATION_RESULT_FAIL_BIND',         2);
-define('LDAP_AUTHENTICATION_RESULT_FAIL_FIND',         3);
-define('LDAP_AUTHENTICATION_RESULT_FAIL_DISALLOWED',   4);
-define('LDAP_AUTHENTICATION_RESULT_FAIL_CREDENTIALS',  5);
-define('LDAP_AUTHENTICATION_RESULT_SUCCESS',           6);
-define('LDAP_AUTHENTICATION_RESULT_FAIL_GENERIC',      7);
-define('LDAP_AUTHENTICATION_RESULT_FAIL_SERVER'      , 8);
-
-define('LDAP_AUTHENTICATION_HELP_LINK_TEXT_DEFAULT', 'Logon Help');
-
 /**
- * Implements hook_menu().
- */
-function ldap_authentication_menu() {
-  $items = array();
-
-  $items['admin/config/people/ldap/authentication'] = array(
-    'title' => 'Authentication',
-    'description' => 'Configure LDAP Authentication',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('ldap_authentication_admin_form'),
-    'access arguments' => array('administer site configuration'),
-    'type' => MENU_LOCAL_TASK,
-    'weight' => 2,
-    'file' => 'ldap_authentication.admin.inc',
-  );
-
-  return $items;
-}
-
- /**
  * Implements hook_menu_alter().
- * since menu items are cached, only useful to add or alter callbacks
- * for ldap authentication driven menu items.
  */
 function ldap_authentication_menu_alter(&$items) {
   $items['user/password']['access callback'] = 'ldap_authentication_show_reset_pwd';
-  $auth_conf = ldap_authentication_get_valid_conf();
-  if (@$auth_conf->ldapUserHelpLinkUrl) {
-    $items['user/ldaphelp'] = array(
-      'title' => $auth_conf->ldapUserHelpLinkText,
-      'page callback' => 'ldap_authentication_redirect_to_ldap_help',
-      'access callback' => 'ldap_authentication_show_ldap_help_link',
-      'type' => MENU_LOCAL_TASK,
-    );
-  }
-}
-
-function ldap_authentication_redirect_to_ldap_help() {
-
-  if ($auth_conf = ldap_authentication_get_valid_conf() && $auth_conf->ldapUserHelpLinkUrl) {
-    drupal_goto($auth_conf->ldapUserHelpLinkUrl);
-  }
-  else {
-    return "Misconfigured LDAP Help Link";
-  }
-
 }
 
 function ldap_authentication_theme() {
@@ -170,43 +104,21 @@ function ldap_authentication_ldap_authenticated($user) {
 
 }
 
-
-/**
- * get LdapAuthenticationConf object
- *
- * @return object LdapAuthenticationConf object if configured, otherwise FALSE
- *
- */
-
-function ldap_authentication_get_valid_conf() {
-  static $auth_conf;
-  if (is_object($auth_conf)) {
-    return $auth_conf;
-  }
-  require_once('LdapAuthenticationConf.class.php');
-  $auth_conf = new LdapAuthenticationConf();
-  return ($auth_conf->inDatabase) ? $auth_conf : FALSE;
-
-}
-
-
-
 function ldap_authentication_show_reset_pwd($user = NULL) {
 
   if (!$user) {
     global $user;
   }
-  $auth_conf = ldap_authentication_get_valid_conf();
-  if (current_path() == 'user/password' || $user->uid == 1 || !$auth_conf) {
+
+  if (current_path() == 'user/password' || $user->uid == 1) {
     return TRUE;
    // always show at user/passwordurl. otherwise user 1 will not be able to reset password.
    // LDAP_authen.login_forms.MM.user1, LDAP_authen.login_forms.EM.user1
   }
 
   if ($user->uid == 0) {
-    // hide reset password for anonymous users if ldap only authentication, otherwise show
-    // LDAP_authen.login_forms.MM.anon, LDAP_authen.login_forms.EM.anon
-    return ($auth_conf->authenticationMode != LDAP_AUTHENTICATION_EXCLUSIVE);
+    // hide reset password for anonymous users
+    return FALSE;
   }
   else {
     // authenticated user.  hide if ldap authenticated otherwise show.
@@ -217,25 +129,15 @@ function ldap_authentication_show_reset_pwd($user = NULL) {
 
 }
 
-
-
-/**
- * Implements hook_form_alter().
- */
-function ldap_authentication_form_alter(&$form, $form_state, $form_id) {
-
-}
-
 /**
  * Implements hook_form_FORM_ID_alter().
  */
 
 function ldap_authentication_form_user_pass_alter(&$form, $form_state) {
   // the following could be in a theme preproces function
-  $auth_conf = ldap_authentication_get_valid_conf();
   $form['ldap_warning'] = array(
      '#type' => 'item',
-     '#markup' => theme('ldap_authentication_user_pass_message', array('auth_conf' => $auth_conf)),
+     '#markup' => theme('ldap_authentication_user_pass_message'),
      '#weight' => 10,
       );
 
@@ -274,8 +176,7 @@ function ldap_authentication_form_user_register_alter(&$form, $form_state) {
  */
 function ldap_authentication_form_user_profile_form_alter(&$form, $form_state) {
   // keep in mind admin may be editing another users profile form.  don't assume current global $user
-  $auth_conf = ldap_authentication_get_valid_conf();
-  if ($auth_conf && ldap_authentication_ldap_authenticated($form['#user'])) {
+  if (ldap_authentication_ldap_authenticated($form['#user'])) {
     // Always hide email field; it's a Leaguerunner preference to enable
     // viewing based on user permissions and team membership, so we don't
     // want to display in Drupal.
@@ -319,32 +220,20 @@ function ldap_authentication_user_login_authenticate_validate($form, &$form_stat
   $pass = $form_state['values']['pass'];
   $watchdog_tokens = array('%username' => $name);
 
-  if (!$auth_conf = ldap_authentication_get_valid_conf()) {
-    watchdog('ldap_authentication', 'Failed to get valid ldap authentication configuration.', array(), WATCHDOG_ERROR);
-    form_set_error('name', 'Server Error: Failed to get valid ldap authentication configuration.' . $error);
-    return FALSE;
-  }
-
  // if already succeeded at authentication, see if LDAP Exclusive is set
   if (isset($form_state['uid']) && is_integer($form_state['uid'])) {
-    if ($auth_conf->authenticationMode == LDAP_AUTHENTICATION_MIXED || $form_state['uid'] == 1) {
+    if ($form_state['uid'] == 1) {
       if ($detailed_watchdog_log) {
-      watchdog('ldap_authentication', '%username : Previously authenticated in mixed mode or uid=1', $watchdog_tokens, WATCHDOG_DEBUG);
+      watchdog('ldap_authentication', '%username : Previously authenticated as uid=1', $watchdog_tokens, WATCHDOG_DEBUG);
       }
       return;  // already passed previous authentication validation
-    }
-    elseif ($auth_conf->authenticationMode == LDAP_AUTHENTICATION_EXCLUSIVE) {
+    } else {
       if ($detailed_watchdog_log) {
         watchdog('ldap_authentication', '%username : Previously authenticated in exclusive mode or uid is not 1.  Clear uid
         in form_state and attempt ldap authentication.',  $watchdog_tokens, WATCHDOG_DEBUG);
       }
       $form_state['uid'] = NULL;  // passed previous authentication, but only ldap should be used
     }
-  }
-
-  if (!count($auth_conf->servers)) {
-    watchdog('ldap_authentication',  'No LDAP servers configured.', array(), WATCHDOG_ERROR);
-    form_set_error('name', 'Server Error:  No LDAP servers configured.');
   }
 
   if ($detailed_watchdog_log) {
@@ -417,22 +306,6 @@ function ldap_authentication_user_login_authenticate_validate($form, &$form_stat
    *
    */
   if (!$account_exists) {
-/*
-  // TODO: do we care?  Leaguerunner allows duplicate email addresses
-
-    if ($account_with_same_email = user_load_by_mail($ldap_user['mail'])) {
-      // 
-      // username does not exist but email does.  Since user_external_login_register does not deal with
-      // mail attribute and the email conflict error needs to be caught beforehand, need to throw error here
-      //
-      $watchdog_tokens['%duplicate_name'] = $account_with_same_email->name;
-      watchdog('ldap_authentication', 'LDAP user with DN %dn has email address
-        (%mail) conflict with a drupal user %duplicate_name', $watchdog_tokens, WATCHDOG_ERROR);
-      drupal_set_message(t('Another user already exists in the system with the same email address. You should contact the system administrator in order to solve this conflict.'), 'error');
-      return FALSE;
-
-    }
-*/
     /**
      *
      * new ldap_authentication provisioned account could let user_external_login_register create the account and set authmaps, but would need
@@ -445,6 +318,7 @@ function ldap_authentication_user_login_authenticate_validate($form, &$form_stat
      *       for external authentication modules
      */
     require_once(drupal_get_path('module', 'ldap_servers') . '/ldap_servers.functions.inc');
+    /// TODO TODO TODO
     $account = ldap_create_drupal_account($name, $ldap_user['mail'], $ldap_user['dn'], $sid);
     if ($account === FALSE) {
       // need to throw error that account was not created
@@ -454,29 +328,12 @@ function ldap_authentication_user_login_authenticate_validate($form, &$form_stat
   }
   else {  // account already exists
     if ($ldap_authentication_authmap == FALSE) {  // LDAP_authen.AC.disallow.ldap.drupal
-      // TODO purge code of loginConflictResolve and LDAP_AUTHENTICATION_CONFLICT_*
       // add ldap_authentication authmap to user.  account name is fine here, though cn could be used
       user_set_authmaps($account, array('authname_ldap_authentication' => $name));
       if ($detailed_watchdog_log) {
           watchdog('ldap_authentication', 'set authmap for %username authname_ldap_authentication', $watchdog_tokens, WATCHDOG_DEBUG);
       }
     }
-/*
-// TODO: again, do we care about email?
-    if ($account->mail != $ldap_user['mail'] && (
-          $auth_conf->emailUpdate == LDAP_AUTHENTICATION_EMAIL_UPDATE_ON_LDAP_CHANGE_ENABLE_NOTIFY ||
-          $auth_conf->emailUpdate == LDAP_AUTHENTICATION_EMAIL_UPDATE_ON_LDAP_CHANGE_ENABLE
-          ))  {
-      $edit = array('mail' => $ldap_user['mail']);
-      if (!$updated_account = user_save($account, $edit)) {
-        $watchdog_tokens = array('%username' => $account->name, '%old' => $account->mail, '%new' => $ldap_user['mail']);
-        watchdog('ldap_authentication', 'User e-mail for %username update from %old to %new failed because of system problems.', $watchdog_tokens,  WATCHDOG_ERROR);
-      }
-      elseif ($auth_conf->emailUpdate == LDAP_AUTHENTICATION_EMAIL_UPDATE_ON_LDAP_CHANGE_ENABLE_NOTIFY ) {
-          $message_tokens = array('@mail' => $ldap_user['mail']);
-          drupal_set_message(t('Your e-mail has been updated to match your LDAP account (@mail).', $message_tokens), 'status');
-      }
-*/
   }
 
   /**
@@ -501,113 +358,6 @@ function ldap_authentication_user_login_authenticate_validate($form, &$form_stat
 }
 
 /**
- * Implements hook_user_login().
- *
- * The user just logged in.
- *
- */
-
-function ldap_authentication_user_login(&$edit, $account) {
-
-}
-
-
-/**
- * Implements hook_user_presave().
- *  A user account is about to be created or updated.
- */
-
-function ldap_authentication_user_presave(&$edit, $account, $category = NULL) {
-
-}
-
-
-/**
- * Implements hook_user_insert().
- *
- * A user account was created.
- * The module should save its custom additions to the user object into the database.
- */
-
-function ldap_authentication_user_insert(&$edit, $account, $category) {
-
-}
-
-
-/**
- * Implements hook_user_update().
- *
- *  A user account was updated.
- *  Modules may use this hook to update their user data in a custom storage after a user account has been updated.
- */
-
-
-function ldap_authentication_user_update($edit, $user, $category) {
-
-}
-
-function ldap_authentication_show_ldap_help_link($user = NULL) {
-  global $user;
-
-  if (!$auth_conf = ldap_authentication_get_valid_conf()) {
-    return FALSE;
-  }
-
-  if ($auth_conf->authenticationMode == LDAP_AUTHENTICATION_MIXED) {
-    return (ldap_authentication_ldap_authenticated($user));
-  // LDAP_authen.login_forms.MM.*  // show ldap help only if ldap authenticated in mixed mode
-
-  }
-  elseif ($auth_conf->authenticationMode == LDAP_AUTHENTICATION_EXCLUSIVE) {
-    if ($user->uid == 0 || ldap_authentication_ldap_authenticated($user)) {
-    // LDAP_authen.login_forms.EM.anon, LDAP_authen.login_forms.EM.ldap
-      return TRUE;
-    }
-    else {
-      return FALSE; // LDAP_authen.login_forms.EM.user1, LDAP_authen.login_forms.EM.drupal
-    }
-  }
-}
-
-function _ldap_authentication_err_text($error) {
-
-  $msg = t('unknown error: ' . $error);
-  switch ($error) {
-    case LDAP_AUTHENTICATION_RESULT_FAIL_CONNECT:
-    $msg = "Failed to connect to ldap server";
-    break;
-
-    case LDAP_AUTHENTICATION_RESULT_FAIL_BIND:
-    $msg = "Failed to bind to ldap server";
-    break;
-
-    case LDAP_AUTHENTICATION_RESULT_FAIL_FIND:
-    $msg =  t('Sorry, unrecognized username or password.');
-    break;
-
-    case LDAP_AUTHENTICATION_RESULT_FAIL_DISALLOWED:
-    $msg = "User disallowed";
-    break;
-
-    case LDAP_AUTHENTICATION_RESULT_FAIL_CREDENTIALS:
-    $msg =  t('Sorry, unrecognized username or password.');
-    break;
-
-    case LDAP_AUTHENTICATION_RESULT_FAIL_GENERIC:
-    $msg = t('Sorry, unrecognized username or password.');
-    break;
-
-    case LDAP_AUTHENTICATION_RESULT_FAIL_SERVER:
-    $msg = t('Authentication Server or Configuration Error.');
-    break;
-
-  }
-
-  return $msg;
-}
-
-
-/**
  * @file
  * ldap_authn provides authentication against ldap server.
  */
@@ -625,17 +375,6 @@ function _ldap_authentication_err_text($error) {
   *   do not remove other authentication submit functions, just reorder.
   */
 function _ldap_authentication_login_form_alter(&$form, &$form_state, $form_id) {
-
-/**
- * make sure ldap_autentication is configured and valid first
- */
-
-  if (!$auth_conf = ldap_authentication_get_valid_conf()) {
-    return;
-  }
-  elseif (!$auth_conf->enabled_servers()) {
-    return;
-  }
 
   /**
    *
@@ -656,19 +395,8 @@ function _ldap_authentication_login_form_alter(&$form, &$form_state, $form_id) {
     $new_validation_sequence = array();
     foreach ($form['#validate'] as $validate_function_name) {
       if ($validate_function_name == 'user_login_authenticate_validate') {
-        if ($auth_conf->authenticationMode == LDAP_AUTHENTICATION_MIXED) {
-         // if mixed mode, allow drupal authentication first
           $new_validation_sequence[] = 'user_login_authenticate_validate';
           $new_validation_sequence[] = 'ldap_authentication_user_login_authenticate_validate';
-        }
-        elseif ($auth_conf->authenticationMode == LDAP_AUTHENTICATION_EXCLUSIVE) {
-         // see drupal.org/node/1009990 and drupal.org/node/1022362 change back when fixed.
-          $new_validation_sequence[] = 'user_login_authenticate_validate';
-          $new_validation_sequence[] = 'ldap_authentication_user_login_authenticate_validate';
-        }
-        else { // misconfigured ldap authentication, restore to original validation sequence
-        $new_validation_sequence[] = 'user_login_authenticate_validate';
-        }
       }
       else {
         $new_validation_sequence[] = $validate_function_name;
@@ -686,5 +414,4 @@ function _ldap_authentication_login_form_alter(&$form, &$form_state, $form_id) {
 
     $form['links']['#markup'] = theme('ldap_authentication_user_login_block_links', $vars);
   }
-  ldap_servers_disable_http_check($form);
 }

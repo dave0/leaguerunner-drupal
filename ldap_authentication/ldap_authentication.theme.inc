@@ -45,22 +45,7 @@ function theme_ldap_authentication_user_login_block_links($variables) {
  * @ingroup themeable
  */
 function theme_ldap_authentication_user_pass_message($variables) {
-  extract($variables);
-  if ($auth_conf->authenticationMode == LDAP_AUTHENTICATION_EXCLUSIVE) {
-    $msg = t('This page is only useful for the site administrator.  All other users
-      need to reset their passwords');
-    if ($auth_conf->ldapUserHelpLinkUrl) {
-      $msg .=  ' ' . t('at') . ' ' . l(t($auth_conf->ldapUserHelpLinkText), $auth_conf->ldapUserHelpLinkUrl) . '.';
-    }
-    else {
-      $msg .=  ' ' . t('with one of your organizations password management sites.');
-    }
-  }
-  else { // mixed mode
-    $msg = ""; // warning will come up on validation.  we do not know if the user is ldap authenticated or not until they submit form.
-  }
-
-  return $msg;
+  return t('This page is only useful for the site administrator.  All other users need to reset their passwords in Leaguerunner');
 }
 
 /**
