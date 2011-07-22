@@ -56,11 +56,6 @@ class LdapAuthenticationConfAdmin extends LdapAuthenticationConf {
     * 4. Email
     */
 
-  $values['emailOptionOptions'] = array(
-    LDAP_AUTHENTICATION_EMAIL_FIELD_REMOVE => t('Don\'t show an email field on user forms.  LDAP derived email will be used for user and connot be changed by user'),
-    LDAP_AUTHENTICATION_EMAIL_FIELD_DISABLE => t('Show disabled email field on user forms with LDAP derived email.  LDAP derived email will be used for user and connot be changed by user'),
-    );
-
   $values['emailUpdateOptions'] = array(
     LDAP_AUTHENTICATION_EMAIL_UPDATE_ON_LDAP_CHANGE_ENABLE_NOTIFY => t('Update stored email if LDAP email differs at login and notify user.'),
     LDAP_AUTHENTICATION_EMAIL_UPDATE_ON_LDAP_CHANGE_ENABLE => t('Update stored email if LDAP email differs at login but don\'t notify user.'),
@@ -98,9 +93,6 @@ class LdapAuthenticationConfAdmin extends LdapAuthenticationConf {
    /**
    * 4. Email
    */
-
-  public $emailOptionDefault = LDAP_AUTHENTICATION_EMAIL_FIELD_REMOVE;
-  public $emailOptionOptions ;
 
   public $emailUpdateDefault = LDAP_AUTHENTICATION_EMAIL_UPDATE_ON_LDAP_CHANGE_ENABLE_NOTIFY;
   public $emailUpdateOptions;
@@ -240,14 +232,6 @@ class LdapAuthenticationConfAdmin extends LdapAuthenticationConf {
       '#collapsed' => FALSE,
     );
 
-    $form['email']['emailOption'] = array(
-      '#type' => 'radios',
-      '#title' => t('Email Behavior'),
-      '#required' => 1,
-      '#default_value' => $this->emailOption,
-      '#options' => $this->emailOptionOptions,
-    );
-
     $form['email']['emailUpdate'] = array(
       '#type' => 'radios',
       '#title' => t('Email Update'),
@@ -292,7 +276,6 @@ class LdapAuthenticationConfAdmin extends LdapAuthenticationConf {
     $this->acctCreation  = ($values['acctCreation']) ? (int)$values['acctCreation'] : NULL;
     $this->ldapUserHelpLinkUrl = ($values['ldapUserHelpLinkUrl']) ? (string)$values['ldapUserHelpLinkUrl'] : NULL;
     $this->ldapUserHelpLinkText = ($values['ldapUserHelpLinkText']) ? (string)$values['ldapUserHelpLinkText'] : NULL;
-    $this->emailOption  = ($values['emailOption']) ? (int)$values['emailOption'] : NULL;
     $this->emailUpdate  = ($values['emailUpdate']) ? (int)$values['emailUpdate'] : NULL;
 
   }

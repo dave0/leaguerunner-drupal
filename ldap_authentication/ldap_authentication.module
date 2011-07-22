@@ -25,11 +25,6 @@ define('LDAP_AUTHENTICATION_EMAIL_UPDATE_ON_LDAP_CHANGE_ENABLE',         2);
 define('LDAP_AUTHENTICATION_EMAIL_UPDATE_ON_LDAP_CHANGE_DISABLE',        3);
 define('LDAP_AUTHENTICATION_EMAIL_UPDATE_ON_LDAP_CHANGE_DEFAULT',        1);
 
-define('LDAP_AUTHENTICATION_EMAIL_ALLOW_DRUPAL_EMAIL', 1);
-define('LDAP_AUTHENTICATION_EMAIL_FIELD_REMOVE',       2);
-define('LDAP_AUTHENTICATION_EMAIL_FIELD_DISABLE',      3);
-define('LDAP_AUTHENTICATION_EMAIL_FIELD_DEFAULT',      3);
-
 define('LDAP_AUTHENTICATION_RESULT_FAIL_CONNECT',      1);
 define('LDAP_AUTHENTICATION_RESULT_FAIL_BIND',         2);
 define('LDAP_AUTHENTICATION_RESULT_FAIL_FIND',         3);
@@ -285,13 +280,10 @@ function ldap_authentication_form_user_profile_form_alter(&$form, $form_state) {
   // keep in mind admin may be editing another users profile form.  don't assume current global $user
   $auth_conf = ldap_authentication_get_valid_conf();
   if ($auth_conf && ldap_authentication_ldap_authenticated($form['#user'])) {
-    if ($auth_conf->emailOption == LDAP_AUTHENTICATION_EMAIL_FIELD_REMOVE) {
-      $form['account']['mail']['#type'] = 'hidden';
-    }
-    elseif ($auth_conf->emailOption == LDAP_AUTHENTICATION_EMAIL_FIELD_DISABLE) {
-      $form['account']['mail']['#disabled'] = TRUE;
-      $form['account']['mail']['#description'] = t('This email address is automatically set and may not be changed.');
-    }
+    // Always hide email field; it's a Leaguerunner preference to enable
+    // viewing based on user permissions and team membership, so we don't
+    // want to display in Drupal.
+    $form['account']['mail']['#type'] = 'hidden';
 
     if (!ldap_authentication_show_reset_pwd($form['#user'])) {
       $form['account']['current_pass']['#disabled'] = TRUE;

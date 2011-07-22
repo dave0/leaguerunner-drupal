@@ -19,7 +19,6 @@ class LdapAuthenticationConf {
   public $ldapUserHelpLinkText = LDAP_AUTHENTICATION_HELP_LINK_TEXT_DEFAULT;
   public $loginConflictResolve = LDAP_AUTHENTICATION_CONFLICT_RESOLVE_DEFAULT;
   public $acctCreation = LDAP_AUTHENTICATION_ACCT_CREATION_DEFAULT;
-  public $emailOption = LDAP_AUTHENTICATION_EMAIL_FIELD_DEFAULT;
   public $emailUpdate = LDAP_AUTHENTICATION_EMAIL_UPDATE_ON_LDAP_CHANGE_DEFAULT;
   public $createLDAPAccounts; // should an drupal account be created when an ldap user authenticates
   public $createLDAPAccountsAdminApproval; // create them, but as blocked accounts
@@ -31,7 +30,6 @@ class LdapAuthenticationConf {
     'acctCreation',
     'ldapUserHelpLinkUrl',
     'ldapUserHelpLinkText',
-    'emailOption',
     'emailUpdate',
   );
 
