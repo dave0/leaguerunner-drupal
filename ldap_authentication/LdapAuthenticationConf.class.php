@@ -21,7 +21,6 @@ class LdapAuthenticationConf {
   public $acctCreation = LDAP_AUTHENTICATION_ACCT_CREATION_DEFAULT;
   public $emailOption = LDAP_AUTHENTICATION_EMAIL_FIELD_DEFAULT;
   public $emailUpdate = LDAP_AUTHENTICATION_EMAIL_UPDATE_ON_LDAP_CHANGE_DEFAULT;
-  public $apiPrefs = array();
   public $createLDAPAccounts; // should an drupal account be created when an ldap user authenticates
   public $createLDAPAccountsAdminApproval; // create them, but as blocked accounts
 
@@ -61,9 +60,6 @@ class LdapAuthenticationConf {
     else {
       $this->inDatabase = FALSE;
     }
-
-    $this->apiPrefs['requireHttps'] = variable_get('ldap_servers_require_ssl_for_credentails', 1);
-    $this->apiPrefs['encryption'] = variable_get('ldap_servers_encryption', LDAP_SERVERS_ENC_TYPE_CLEARTEXT);
 
     // determine account creation configuration
     $user_register = variable_get('user_register', USER_REGISTER_VISITORS_ADMINISTRATIVE_APPROVAL);
