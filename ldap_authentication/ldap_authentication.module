@@ -34,10 +34,6 @@ define('LDAP_AUTHENTICATION_RESULT_SUCCESS',           6);
 define('LDAP_AUTHENTICATION_RESULT_FAIL_GENERIC',      7);
 define('LDAP_AUTHENTICATION_RESULT_FAIL_SERVER'      , 8);
 
-define('LDAP_AUTHENTICATION_ACCT_CREATION_DEFAULT',                4);
-define('LDAP_AUTHENTICATION_ACCT_CREATION_USER_SETTINGS_FOR_LDAP', 1);
-define('LDAP_AUTHENTICATION_ACCT_CREATION_LDAP_BEHAVIOR',          4);
-
 define('LDAP_AUTHENTICATION_HELP_LINK_TEXT_DEFAULT', 'Logon Help');
 
 /**
@@ -376,12 +372,6 @@ function ldap_authentication_user_login_authenticate_validate($form, &$form_stat
   }
   else {  // account does not exist
     $account_exists = FALSE;
-    if ($auth_conf->createLDAPAccounts == FALSE) {
-      if ($detailed_watchdog_log) {
-        watchdog('ldap_authentication', '%username : Drupal User Account not found and configuration is set to not create new accounts.', $watchdog_tokens, WATCHDOG_DEBUG);
-      }
-      return FALSE; // don't bother authenticating if account doesn't exists and account creation not allowed
-    }
     if ($detailed_watchdog_log) {
       watchdog('ldap_authentication', '%username : Exisitng Drupal User Account not found.  Continuing on to attempt ldap authentication', $watchdog_tokens, WATCHDOG_DEBUG);
     }

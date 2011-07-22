@@ -18,16 +18,12 @@ class LdapAuthenticationConf {
   public $ldapUserHelpLinkUrl;
   public $ldapUserHelpLinkText = LDAP_AUTHENTICATION_HELP_LINK_TEXT_DEFAULT;
   public $loginConflictResolve = LDAP_AUTHENTICATION_CONFLICT_RESOLVE_DEFAULT;
-  public $acctCreation = LDAP_AUTHENTICATION_ACCT_CREATION_DEFAULT;
   public $emailUpdate = LDAP_AUTHENTICATION_EMAIL_UPDATE_ON_LDAP_CHANGE_DEFAULT;
-  public $createLDAPAccounts; // should an drupal account be created when an ldap user authenticates
-  public $createLDAPAccountsAdminApproval; // create them, but as blocked accounts
 
   protected $saveable = array(
     'sids',
     'authenticationMode',
     'loginConflictResolve',
-    'acctCreation',
     'ldapUserHelpLinkUrl',
     'ldapUserHelpLinkText',
     'emailUpdate',
@@ -58,22 +54,6 @@ class LdapAuthenticationConf {
     else {
       $this->inDatabase = FALSE;
     }
-
-    // determine account creation configuration
-    $user_register = variable_get('user_register', USER_REGISTER_VISITORS_ADMINISTRATIVE_APPROVAL);
-    if ($this->acctCreation == LDAP_AUTHENTICATION_ACCT_CREATION_DEFAULT || $user_register == USER_REGISTER_VISITORS) {
-      $this->createLDAPAccounts = TRUE;
-      $this->createLDAPAccountsAdminApproval = FALSE;
-    }
-    elseif ($user_register == USER_REGISTER_VISITORS_ADMINISTRATIVE_APPROVAL) {
-      $this->createLDAPAccounts = FALSE;
-      $this->createLDAPAccountsAdminApproval = TRUE;
-    }
-    else {
-      $this->createLDAPAccounts = FALSE;
-      $this->createLDAPAccountsAdminApproval = FALSE;
-    }
-
   }
 
   /**
