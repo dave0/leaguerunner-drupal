@@ -377,158 +377,54 @@ function ldap_authentication_user_login_authenticate_validate($form, &$form_stat
     }
   }
 
-  foreach ($auth_conf->servers as $sid => $ldap_server) {
+  // Authenticate
+  $curl = curl_init();
+  curl_setopt($curl, CURLOPT_URL, 'http://www.ocua.ca/leaguerunner/api/2/login');
+  curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
+  curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 1);
+
+  curl_setopt($CURL, CURLOPT_POST, TRUE);
+  curl_setopt($curl, CURLOPT_POSTFIELDS, array(
+	'username' => $name,
+	'password' => $pass,
+	'remote_addr' => $_SERVER['REMOTE_ADDR'],
+	'cookie' => session_id(),
+  ));
+
+  if( ! $xml = curl_exec( $curl ) ) {
     $watchdog_tokens['%sid'] = $sid;
-    $watchdog_tokens['%bind_method'] = $ldap_server->bind_method;
+    $watchdog_tokens['%curl_error'] = curl_error();
     if ($detailed_watchdog_log) {
-      watchdog('ldap_authentication', '%username : Trying server %sid where bind_method = %bind_method', $watchdog_tokens, WATCHDOG_DEBUG);
+      watchdog('leaguerunner_authentication', '%username : Failed against server %sid with error: %curl_error', $watchdog_tokens, WATCHDOG_DEBUG);
     }
-    $authentication_result = LDAP_AUTHENTICATION_RESULT_FAIL_GENERIC;
-    $result = $ldap_server->connect();
-    if ($result != LDAP_SUCCESS) {
-      $authentication_result = LDAP_AUTHENTICATION_RESULT_FAIL_CONNECT;
-      $watchdog_tokens['%err_msg'] = $ldap_server->errorMsg('ldap');
-      if ($detailed_watchdog_log) {
-        watchdog('ldap_authentication',  '%username : Failed connecting to %sid.  Error: %err_msg', $watchdog_tokens, WATCHDOG_DEBUG);
-      }
-      $watchdog_tokens['%err_msg'] = NULL;
-      continue; // next server, please
-    }
-    elseif ($detailed_watchdog_log) {
-      watchdog('ldap_authentication',  '%username : Success at connecting to %sid', $watchdog_tokens, WATCHDOG_DEBUG);
-    }
-
-    if ($ldap_server->bind_method ==  LDAP_SERVERS_BIND_METHOD_SERVICE_ACCT) {
-      $result = $ldap_server->bind();
-    }
-    elseif ($ldap_server->bind_method ==  LDAP_SERVERS_BIND_METHOD_USER) {
-      $result = LDAP_FAIL;
-      foreach ($ldap_server->basedn as $basedn) {
-        $search = array('%basedn', '%username');
-        $replace = array($basedn, $name);
-        $userdn = str_replace($search, $replace, $ldap_server->user_dn_expression);
-        $result = $ldap_server->bind($userdn, $pass);
-        if ($result == LDAP_SUCCESS) {
-          break;
-        }
-      }
-    }
-    elseif ($ldap_server->bind_method ==  LDAP_SERVERS_BIND_METHOD_ANON) {
-      $result = $ldap_server->bind();
-    }
-    elseif ($ldap_server->bind_method ==  LDAP_SERVERS_BIND_METHOD_ANON_USER) {
-      $result = $ldap_server->bind();
-      if ($result == LDAP_SUCCESS) {
-        $result = LDAP_FAIL;
-      	foreach ($ldap_server->basedn as $basedn) {
-          $userdn = $ldap_server->user_lookup($name);
-          $result = $ldap_server->bind($userdn, $pass);
-          if ($result == LDAP_SUCCESS) {
-            break;
-          }
-        }
-      }
-    }
-
-    if ($result != LDAP_SUCCESS) {
-      if ($detailed_watchdog_log) {
-        $watchdog_tokens['%err_text'] = $ldap_server->errorMsg('ldap');
-        watchdog('ldap_authentication', '%username : Trying server %sid where bind_method = %bind_method.  Error: %err_text', $watchdog_tokens, WATCHDOG_DEBUG);
-        $watchdog_tokens['%err_text'] = NULL;
-      }
-      $authentication_result = LDAP_AUTHENTICATION_RESULT_FAIL_BIND;
-      continue; // next server, please
-    }
-
-    /**
-    * does user exist in ldap?
-    */
-    $ldap_user = $ldap_server->user_lookup($name);
-    if (!$ldap_user) {
-      if ($detailed_watchdog_log) {
-        $watchdog_tokens['%err_text'] = $ldap_server->errorMsg('ldap');
-        watchdog('ldap_authentication', '%username : Trying server %sid where bind_method = %bind_method.  Error: %err_text', $watchdog_tokens, WATCHDOG_DEBUG);
-        $watchdog_tokens['%err_text'] = NULL;
-      }
-      if ($ldap_server->ldapErrorNumber()) {
-        $authentication_result = LDAP_AUTHENTICATION_RESULT_FAIL_SERVER;
-        break;
-      }
-      $authentication_result = LDAP_AUTHENTICATION_RESULT_FAIL_FIND;
-      continue; // next server, please
-    }
-    $watchdog_tokens['%dn'] = $ldap_user['dn'];
-    $watchdog_tokens['%mail'] = $ldap_user['mail'];
-    /**
-    * check allowed and excluded list and php for allowed users
-    */
-    $allow = $auth_conf->allowUser($name, $ldap_user);
-    if (!$allow) {
-      $authentication_result = LDAP_AUTHENTICATION_RESULT_FAIL_DISALLOWED;
-      break;  // regardless of how many servers, disallowed user fails
-    }
-    /**
-    * test password
-    */
-    $result = $ldap_server->bind($ldap_user['dn'], $pass);
-    if ($result != LDAP_SUCCESS) {
-      if ($detailed_watchdog_log) {
-        $watchdog_tokens['%err_text'] = $ldap_server->errorMsg('ldap');
-        watchdog('ldap_authentication', '%username : Testing user credentials on server %sid where bind_method = %bind_method.  Error: %err_text', $watchdog_tokens, WATCHDOG_DEBUG);
-        $watchdog_tokens['%err_text'] = NULL;
-      }
-      $authentication_result = LDAP_AUTHENTICATION_RESULT_FAIL_CREDENTIALS;
-      continue; // next server, please
-    }
-    else {
-      $authentication_result = LDAP_AUTHENTICATION_RESULT_SUCCESS;
-      break; //success
-    }
-  }  // end loop through servers
-  $watchdog_tokens['%result'] = $result;
-  $watchdog_tokens['%auth_result'] = $authentication_result;
-  $watchdog_tokens['%err_text'] =  _ldap_authentication_err_text($authentication_result) ;
-  if ($detailed_watchdog_log) {
-    watchdog('ldap_authentication',  '%username : Authentication result id=%result auth_result=%auth_result (%err_text)', $watchdog_tokens, WATCHDOG_DEBUG);
-  }
-
-  if ($authentication_result != LDAP_AUTHENTICATION_RESULT_SUCCESS) {
-    $watchdog_tokens['%err_text'] =  _ldap_authentication_err_text($authentication_result);
-  // fail scenario 1.  ldap auth exclusive and failed  throw error
-    if ($auth_conf->authenticationMode == LDAP_AUTHENTICATION_EXCLUSIVE) {
-      if ($detailed_watchdog_log) {
-        watchdog('ldap_authentication', '%username : setting error because failed at ldap and
-          LDAP_AUTHENTICATION_EXCLUSIVE is set to true.  So need to stop authentication of Drupal user that is not user 1.
-          error message: %err_text', $watchdog_tokens, WATCHDOG_DEBUG);
-      }
-      form_set_error('name', $watchdog_tokens['%err_text']);
-    }
-    else {
-   // fail scenario 2.  simply fails ldap.  return false.
-   // don't show user message, may be using other authentication after this that may succeed.
-    if ($detailed_watchdog_log) {
-      watchdog('ldap_authentication',
-        '%username : Failed ldap authentication.
-        User may have authenticated successfully by other means in a mixed authentication site.
-        LDAP Authentication Error #: %auth_result  error message: %err_text',
-        $watchdog_tokens,
-        WATCHDOG_DEBUG
-        );
-      }
-    }
+    form_set_error('name', 'Failed to authenticate against Leaguerunner');
+    curl_close($curl);
     return FALSE;
   }
+  curl_close($curl);
+
+  // Check result
+  $xmlObj = simplexml_load_string($xml);
+  if( ! $xmlObj->status == 'ok' ) {
+    form_set_error('name', 'Login failed: ' . $xmlObj->error);
+    return FALSE;
+  }
+
+  // OK, we're in, and have XML data containing the user's full name and possibly other info
 
   /**
    * case 1: previously drupal authenticated user authenticated successfully on ldap
    *
    */
   if (!$account_exists) {
+/*
+  // TODO: do we care?  Leaguerunner allows duplicate email addresses
+
     if ($account_with_same_email = user_load_by_mail($ldap_user['mail'])) {
-      /**
-       * username does not exist but email does.  Since user_external_login_register does not deal with
-       * mail attribute and the email conflict error needs to be caught beforehand, need to throw error here
-       */
+      // 
+      // username does not exist but email does.  Since user_external_login_register does not deal with
+      // mail attribute and the email conflict error needs to be caught beforehand, need to throw error here
+      //
       $watchdog_tokens['%duplicate_name'] = $account_with_same_email->name;
       watchdog('ldap_authentication', 'LDAP user with DN %dn has email address
         (%mail) conflict with a drupal user %duplicate_name', $watchdog_tokens, WATCHDOG_ERROR);
@@ -536,6 +432,7 @@ function ldap_authentication_user_login_authenticate_validate($form, &$form_stat
       return FALSE;
 
     }
+*/
     /**
      *
      * new ldap_authentication provisioned account could let user_external_login_register create the account and set authmaps, but would need
@@ -557,21 +454,15 @@ function ldap_authentication_user_login_authenticate_validate($form, &$form_stat
   }
   else {  // account already exists
     if ($ldap_authentication_authmap == FALSE) {  // LDAP_authen.AC.disallow.ldap.drupal
-      if ($auth_conf->loginConflictResolve == LDAP_AUTHENTICATION_CONFLICT_LOG) {
-        $watchdog_tokens['%conflict_name'] = $account_with_same_email->name;
-        watchdog('ldap_authentication', 'LDAP user with DN %dn has a naming conflict with a local drupal user %conflict_name', $watchdog_tokens, WATCHDOG_ERROR);
-        drupal_set_message(t('Another user already exists in the system with the same login name. You should contact the system administrator in order to solve this conflict.'), 'error');
-        return FALSE;
-      }
-      else { // LDAP_authen.AC.disallow.ldap.drupal
+      // TODO purge code of loginConflictResolve and LDAP_AUTHENTICATION_CONFLICT_*
       // add ldap_authentication authmap to user.  account name is fine here, though cn could be used
-        user_set_authmaps($account, array('authname_ldap_authentication' => $name));
-        if ($detailed_watchdog_log) {
+      user_set_authmaps($account, array('authname_ldap_authentication' => $name));
+      if ($detailed_watchdog_log) {
           watchdog('ldap_authentication', 'set authmap for %username authname_ldap_authentication', $watchdog_tokens, WATCHDOG_DEBUG);
-        }
       }
     }
-
+/*
+// TODO: again, do we care about email?
     if ($account->mail != $ldap_user['mail'] && (
           $auth_conf->emailUpdate == LDAP_AUTHENTICATION_EMAIL_UPDATE_ON_LDAP_CHANGE_ENABLE_NOTIFY ||
           $auth_conf->emailUpdate == LDAP_AUTHENTICATION_EMAIL_UPDATE_ON_LDAP_CHANGE_ENABLE
@@ -585,7 +476,7 @@ function ldap_authentication_user_login_authenticate_validate($form, &$form_stat
           $message_tokens = array('@mail' => $ldap_user['mail']);
           drupal_set_message(t('Your e-mail has been updated to match your LDAP account (@mail).', $message_tokens), 'status');
       }
-    }
+*/
   }
 
   /**
