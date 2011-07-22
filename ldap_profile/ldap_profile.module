@@ -1,0 +1,108 @@
+<?php
+
+/**
+ * @file
+ * This module provides the LDAP package the ability to map drupal profile fields to ldap fields
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function ldap_profile_menu() {
+  $items = array();
+
+  $items['admin/config/people/ldap/profile'] = array(
+    'title' => 'Profile Mapping',
+    'description' => 'Configure LDAP Profile Mapping',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ldap_profile_admin_form'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 7,
+    'file' => 'ldap_profile.admin.inc',
+  );
+
+  return $items;
+}
+
+
+/**
+ * Implements hook_help().
+ */
+
+function ldap_profile_help($path, $arg) {
+}
+
+/**
+ * Implements hook_info().
+ */
+function ldap_profile_info($field = 0) {
+  $info['name']= 'ldap_profile';
+  $info['protocol'] = 'LDAP';
+
+  if ($field) {
+    return $info[$field];
+  }
+
+  return $info;
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function ldap_profile_form_alter(&$form, $form_state, $form_id) {
+
+}
+
+/**
+ * Provides a valid LdapProfile configuration object.
+ */
+function ldap_profile_get_valid_conf() {
+  static $auth_conf;
+  if (is_object($auth_conf)) {
+    return $auth_conf;
+  }
+  require_once('LdapProfileConf.class.php');
+  $auth_conf = new LdapProfileConf();
+  return ($auth_conf->inDatabase) ? $auth_conf : FALSE;
+
+}
+
+/**
+ * Provides a custom tranlation for ldap to drupal information
+ * example - ldap stores has a field that specfies supervior = supervisor
+ *           in drupal you might want to store this a single on/off checkbox
+ *           this will allow you write a data translation for that field
+ * @params - field - indicates which ldap field is being translated
+ * @params - value - indicates the value from ldap that was pulled
+ */
+function ldap_profile_translate($field, $value) {
+  require_once('ldap_profile_data_translate.inc');
+  return ldap_profile_custom_translate($field, $value);
+}
+
+/**
+ * Provides an array of all the current ldap fields that are currently mapped to profile fields
+ */
+function ldap_profile_get_ldap_fields() {
+  $auth_conf = ldap_profile_get_valid_conf();
+  return $auth_conf->ldap_fields;
+}
+
+/**
+ * Provides an array of all the current profile fields mappings with ldap fields
+ */
+function ldap_profile_get_mapping($profile_field = '') {
+  $auth_conf = ldap_profile_get_valid_conf();
+  $result = array();
+  $mapping = $auth_conf->mapping;
+
+  if($profile_field != '') {
+    if(array_key_exists($profile_field, $mapping)) {
+      $result = array($mapping[$profile_field]);
+    }
+  } else {
+    $result = $mapping;
+  }
+  return $result;
+}

@@ -1,0 +1,21 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the LDAP provision module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function ldap_provision_install() {
+
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function ldap_provision_uninstall() {
+  variable_del('ldap_provision_conf');
+}
+

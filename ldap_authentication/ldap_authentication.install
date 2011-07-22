@@ -1,0 +1,22 @@
+<?php
+// $Id: ldap_authentication.install,v 1.1.4.2 2011/02/08 06:01:00 johnbarclay Exp $
+
+/**
+ * @file
+ * Install, update and uninstall functions for the LDAP authentication module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function ldap_authentication_install() {
+
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function ldap_authentication_uninstall() {
+  //$result = db_query('DELETE FROM {variables} WHERE name like "ldap_authentication_%"');
+  variable_del('ldap_authentication_conf');
+}

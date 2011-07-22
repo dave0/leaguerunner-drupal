@@ -1,0 +1,182 @@
+<?php
+
+/**
+ * @file
+ * This module provides the LDAP package the ability to search an LDAP server for users that should be imported into drupal..
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function ldap_provision_menu() {
+  $items = array();
+
+  $items['admin/config/people/ldap/provisioning'] = array(
+    'title' => 'Provisioning',
+    'description' => 'Configure LDAP Provisioning',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ldap_provision_admin_form'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 5,
+    'file' => 'ldap_provision.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function ldap_provision_theme() {
+  return array(
+    'ldap_provision_admin_test_table' => array(
+      'render element' => 'element',
+      'file' => 'ldap_provision.theme.inc'
+    ),
+  );
+}
+
+/**
+ * Implements hook_help().
+ */
+function ldap_provision_help($path, $arg) {
+  //TODO
+}
+
+/**
+ * Implements hook_info().
+ */
+function ldap_provision_info($field = 0) {
+  $info['name']= 'ldap_provision';
+  $info['protocol'] = 'LDAP';
+
+  if ($field) {
+    return $info[$field];
+  }
+
+  return $info;
+}
+
+/**
+ * Implements hook_cron
+ */
+function ldap_provision_cron() {
+  require_once('LdapProvisionConfAdmin.class.php');
+  $auth_conf = new LdapProvisionConfAdmin();
+
+  $last_cron = $auth_conf->get_last_cron();
+  $last_cron_day = date("Ymd", $last_cron);
+  $last_cron_hour = date("H", $last_cron);
+  $cur_day = date("Ymd");
+  $cur_hour = date("H");
+
+  $result = array();
+  $hour = 0;
+
+  switch($auth_conf->provisionCron) {
+    case 0: // ran nightly - at 0300
+            if($cur_day > $last_cron_day && $cur_hour > 3) {
+              $result[] = $auth_conf;
+            };
+            break;
+    case 1: // ran every 12 hours
+            $hour = 12; break;
+    case 2: // ran every 6 hours
+            $hour = 6; break;
+    case 3: // ran every 2 hours
+            $hour = 2; break;
+    case 4: // ran every 1 hour
+            $hour = 1; break;
+    case 5: // run every cron
+    default: $result[] = $auth_conf;
+  }
+
+  if($hour != 0) {
+    $cur_hour = $cur_hour + (24 * ($cur_day - $last_cron_day));
+    if($cur_hour >= $last_cron_hour + $hour) {
+      $result[] = $auth_conf;
+    };
+  }
+
+  $queue = DrupalQueue::get('ldap_provision');
+  foreach ($result as $feed) {
+    $queue->createItem($feed);
+  }
+}
+
+/**
+ * Implements hook_cron_queue_info
+ */
+function ldap_provision_cron_queue_info() {
+  // $length is amount time (sec) to allow the cron to execute.
+  // 15 mins
+  $length = 900;
+  $queues = array();
+  $queues['ldap_provision'] = array(
+    'worker callback' => 'ldap_provision_cron_job',
+    'time' => $length,
+  );
+  return $queues;
+}
+
+/**
+ * This function executes the provision account cron function.
+ */
+function ldap_provision_cron_job($auth_conf) {
+  $accounts = $auth_conf->search();
+  $servers = ldap_servers_get_servers('','enabled');
+
+  foreach($accounts as $sid => $dn) {
+    foreach($dn as $base_dn => $base_dn_accounts) {
+      watchdog('ldap', 'LDAP processing '. $servers[$sid]->name .' with base dn of '. $servers[$sid][$base_dn]);
+      $mapping = ldap_profile_get_mapping();
+      $username = $mapping['username'];
+      $mail = $mapping['mail'];
+
+      $broken_accounts = array();
+      $create_success = array();
+      $update_success = array();
+
+      if(!empty($accounts)) {
+        $sid = $accounts['sid'];
+        foreach($accounts as $key => $account) {
+          if($key !== 'sid' && $key !== 'count') {
+            // if name doesn't exist, not a valid account and should be skipped
+            if(!empty($account[$username])) {
+              $name = $account[$username][0];
+              // user exist in drupal already, need to update drupal account with any new ldap information
+              if($user = user_load_by_name($name)) {
+                $updated = $auth_conf->update_drupal_account($account,$user);
+                if(!$updated) {
+                  $broken_accounts[] = $name;
+                } else {
+                 $update_success[] = $name;
+                }
+              } else {
+                // user is new, need to create the drupal account with the ldap account information
+                $created = $auth_conf->create_drupal_account($account, $sid);
+                if(!$created) {
+                  $broken_accounts[] = $name;
+                } else {
+                  $create_success[] = $name;
+                }
+              }
+            }
+          }
+        }
+        watchdog('ldap', 'Create = '. count($create_success) .' - Update = '. count($update_success) .' - Failures = '. count($broken_accounts));
+      }
+    }
+  }
+  $auth_conf->update_cron();
+  $auth_conf->save();
+}
+
+/**
+ * Performs a test search of LDAP to see what accounts would have been provisioned based on the current settings.
+ */
+function ldap_provision_test_search($provision_conf) {
+  $accounts = $provision_conf->search();
+  return $accounts;
+}
