@@ -25,18 +25,6 @@ class LdapAuthenticationConf {
   public $createLDAPAccounts; // should an drupal account be created when an ldap user authenticates
   public $createLDAPAccountsAdminApproval; // create them, but as blocked accounts
 
-  /**
-   * Advanced options.   whitelist / blacklist options
-   *
-   * these are on the fuzzy line between authentication and authorization
-   * and determine if a user is allowed to authenticate with ldap
-   *
-   */
-
-  public $allowOnlyIfTextInDn = array(); // eg ou=education that must be met to allow ldap authentication
-  public $excludeIfTextInDn = array();
-
-
   protected $saveable = array(
     'sids',
     'authenticationMode',
@@ -46,8 +34,6 @@ class LdapAuthenticationConf {
     'ldapUserHelpLinkText',
     'emailOption',
     'emailUpdate',
-    'allowOnlyIfTextInDn',
-    'excludeIfTextInDn',
   );
 
   /** are any ldap servers that are enabled associated with ldap authentication **/
@@ -111,28 +97,6 @@ class LdapAuthenticationConf {
    * return boolean
    */
   public function allowUser($name, $ldap_user) {
-    /**
-     * do one of the exclude attribute pairs match
-     */
-    $exclude = FALSE;
-    foreach ($this->excludeIfTextInDn as $test) {
-      if (strpos(drupal_strtolower($ldap_user['dn']), drupal_strtolower($test)) !== FALSE) {
-        return FALSE;//  if a match, return FALSE;
-      }
-    }
-
-    /**
-     * do one of the allow attribute pairs match
-     */
-    if (count($this->allowOnlyIfTextInDn)) {
-      foreach ($this->allowOnlyIfTextInDn as $test) {
-        if (strpos(drupal_strtolower($ldap_user['dn']), drupal_strtolower($test)) !== FALSE) {
-          return TRUE;
-        }
-      }
-      return FALSE;
-    }
-
     /**
      * default to allowed
      */

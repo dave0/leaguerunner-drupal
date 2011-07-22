@@ -30,19 +30,6 @@ class LdapAuthenticationConfAdmin extends LdapAuthenticationConf {
 
     $values['ldapUserHelpLinkTextDescription']  = t('Text for above link e.g. Account Help or Campus Password Help Page');
 
-
-    /**
-     * 2.  LDAP User Restrictions
-     */
-
-    $values['allowOnlyIfTextInDnDescription'] = t('A list of text such as ou=education
-      or cn=barclay that at least one of be found in users cn string.  Enter one per line
-      such as <pre>ou=education') . "\n" . t('ou=engineering</pre>   This test will be case insensitive.');
-
-    $values['excludeIfTextInDnDescription'] = t('A list of text such as ou=evil
-      or cn=bad that if found in a users cn, exclude them from ldap authentication.
-      Enter one per line such as <pre>ou=evil') . "\n" . t('cn=bad</pre> This test will be case insensitive.');
-
     /**
     * 3. Drupal Account Provisioning and Syncing
     */
@@ -95,13 +82,6 @@ class LdapAuthenticationConfAdmin extends LdapAuthenticationConf {
   protected $authenticationServersOptions = array();
   protected $ldapUserHelpLinkUrlDescription;
   protected $ldapUserHelpLinkTextDescription;
-
-  /**
-   * 2.  LDAP User Restrictions
-   */
-
-  protected $allowOnlyIfTextInDnDescription;
-  protected $excludeIfTextInDnDescription;
 
    /**
    * 3. Drupal Account Provisioning and Syncing
@@ -227,25 +207,6 @@ class LdapAuthenticationConfAdmin extends LdapAuthenticationConf {
       '#collapsed' => FALSE,
     );
 
-
-    $form['restrictions']['allowOnlyIfTextInDn'] = array(
-      '#type' => 'textarea',
-      '#title' => t('Allow Only Text Test'),
-      '#default_value' => $this->arrayToLines($this->allowOnlyIfTextInDn),
-      '#cols' => 50,
-      '#rows' => 3,
-      '#description' => t($this->allowOnlyIfTextInDnDescription, $tokens),
-    );
-
-    $form['restrictions']['excludeIfTextInDn'] = array(
-      '#type' => 'textarea',
-      '#title' => t('Excluded Text Test'),
-      '#default_value' => $this->arrayToLines($this->excludeIfTextInDn),
-      '#cols' => 50,
-      '#rows' => 3,
-      '#description' => t($this->excludeIfTextInDnDescription, $tokens),
-    );
-
     $form['drupal_accounts'] = array(
       '#type' => 'fieldset',
       '#title' => t('Drupal User Account Creation'),
@@ -327,8 +288,6 @@ class LdapAuthenticationConfAdmin extends LdapAuthenticationConf {
   protected function populateFromDrupalForm($values) {
     $this->authenticationMode = ($values['authenticationMode']) ? (int)$values['authenticationMode'] : NULL;
     $this->sids = $values['authenticationServers'];
-    $this->allowOnlyIfTextInDn = $this->linesToArray($values['allowOnlyIfTextInDn']);
-    $this->excludeIfTextInDn = $this->linesToArray($values['excludeIfTextInDn']);
     $this->loginConflictResolve  = ($values['loginConflictResolve']) ? (int)$values['loginConflictResolve'] : NULL;
     $this->acctCreation  = ($values['acctCreation']) ? (int)$values['acctCreation'] : NULL;
     $this->ldapUserHelpLinkUrl = ($values['ldapUserHelpLinkUrl']) ? (string)$values['ldapUserHelpLinkUrl'] : NULL;
