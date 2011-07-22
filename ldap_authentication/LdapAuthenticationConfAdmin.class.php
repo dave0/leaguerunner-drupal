@@ -43,10 +43,6 @@ class LdapAuthenticationConfAdmin extends LdapAuthenticationConf {
       or cn=bad that if found in a users cn, exclude them from ldap authentication.
       Enter one per line such as <pre>ou=evil') . "\n" . t('cn=bad</pre> This test will be case insensitive.');
 
-    $values['allowTestPhpDescription'] = t('PHP code which should return boolean
-        for allowing ldap authentication.  Available variables are:
-        $drupal_mapped_username and $user_ldap_entry  See readme.txt for more info.');
-
     /**
     * 3. Drupal Account Provisioning and Syncing
     */
@@ -106,7 +102,6 @@ class LdapAuthenticationConfAdmin extends LdapAuthenticationConf {
 
   protected $allowOnlyIfTextInDnDescription;
   protected $excludeIfTextInDnDescription;
-  protected $allowTestPhpDescription;
 
    /**
    * 3. Drupal Account Provisioning and Syncing
@@ -251,15 +246,6 @@ class LdapAuthenticationConfAdmin extends LdapAuthenticationConf {
       '#description' => t($this->excludeIfTextInDnDescription, $tokens),
     );
 
-    $form['restrictions']['allowTestPhp'] = array(
-      '#type' => 'textarea',
-      '#title' => t('PHP to Test for Allowed LDAP Users'),
-      '#default_value' => $this->allowTestPhp,
-      '#cols' => 50,
-      '#rows' => 3,
-      '#description' => t($this->allowTestPhpDescription, $tokens),
-    );
-
     $form['drupal_accounts'] = array(
       '#type' => 'fieldset',
       '#title' => t('Drupal User Account Creation'),
@@ -343,7 +329,6 @@ class LdapAuthenticationConfAdmin extends LdapAuthenticationConf {
     $this->sids = $values['authenticationServers'];
     $this->allowOnlyIfTextInDn = $this->linesToArray($values['allowOnlyIfTextInDn']);
     $this->excludeIfTextInDn = $this->linesToArray($values['excludeIfTextInDn']);
-    $this->allowTestPhp = $values['allowTestPhp'];
     $this->loginConflictResolve  = ($values['loginConflictResolve']) ? (int)$values['loginConflictResolve'] : NULL;
     $this->acctCreation  = ($values['acctCreation']) ? (int)$values['acctCreation'] : NULL;
     $this->ldapUserHelpLinkUrl = ($values['ldapUserHelpLinkUrl']) ? (string)$values['ldapUserHelpLinkUrl'] : NULL;

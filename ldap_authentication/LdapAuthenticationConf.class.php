@@ -35,7 +35,6 @@ class LdapAuthenticationConf {
 
   public $allowOnlyIfTextInDn = array(); // eg ou=education that must be met to allow ldap authentication
   public $excludeIfTextInDn = array();
-  public $allowTestPhp = NULL; // code that returns boolean TRUE || FALSE for allowing ldap authentication
 
 
   protected $saveable = array(
@@ -49,7 +48,6 @@ class LdapAuthenticationConf {
     'emailUpdate',
     'allowOnlyIfTextInDn',
     'excludeIfTextInDn',
-    'allowTestPhp',
   );
 
   /** are any ldap servers that are enabled associated with ldap authentication **/
@@ -120,18 +118,6 @@ class LdapAuthenticationConf {
     foreach ($this->excludeIfTextInDn as $test) {
       if (strpos(drupal_strtolower($ldap_user['dn']), drupal_strtolower($test)) !== FALSE) {
         return FALSE;//  if a match, return FALSE;
-      }
-    }
-
-
-    /**
-     * evaluate php if it exists
-     */
-    if (module_exists('php') && $this->allowTestPhp) {
-      $code = '<?php ' . $this->allowTestPhp . ' ?>';
-      $code_result = @php_eval($code);
-      if ((boolean)($code_result) == FALSE) {
-        return FALSE;
       }
     }
 
