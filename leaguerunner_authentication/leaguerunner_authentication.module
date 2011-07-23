@@ -1,78 +1,63 @@
 <?php
-// $Id: ldap_authentication.module,v 1.1.4.3 2011/02/08 20:05:41 johnbarclay Exp $
-
 /**
  * @file
  * This module injects itself into Drupal's Authentication stack.
  */
 
 /**
- * @todo fix advanced help for ../ldap/authentication settings page
- *
- */
-define('LDAP_AUTHENTICATION_PROJECT_TAG', 'ldap');
-
-/**
  * Implements hook_menu_alter().
  */
-function ldap_authentication_menu_alter(&$items) {
-  $items['user/password']['access callback'] = 'ldap_authentication_show_reset_pwd';
+function leaguerunner_authentication_menu_alter(&$items)
+{
+	$items['user/password']['access callback'] = 'leaguerunner_authentication_show_reset_pwd';
 }
 
-function ldap_authentication_theme() {
-  return array(
-    'ldap_authentication_user_login_block_links' => array(
-      'variables' => array('ldap_user_help_link' => NULL, 'user_register' => TRUE),
-      'render element' => 'element',
-    ),
-   'ldap_authentication_user_pass_message' => array(
-      'variables' => array('show_reset_pwd' => NULL, 'auth_conf' => TRUE),
-      'render element' => 'element',
-    ),
-   'ldap_authentication_user_pass_validate_ldap_authenticated' => array(
-      'variables' => array('account' => NULL, 'auth_conf' => TRUE),
-      'render element' => 'element',
-    ),
-  );
+function leaguerunner_authentication_theme()
+{
+	return array(
+		'leaguerunner_authentication_user_login_block_links' => array(
+			'render element' => 'element',
+		),
+		'leaguerunner_authentication_user_pass_message' => array(
+			'render element' => 'element',
+		),
+		'leaguerunner_authentication_user_pass_validate_leaguerunner_authenticated' => array(
+			'render element' => 'element',
+		),
+	);
 }
-
-
 /**
  * Implements hook_help().
  */
+function leaguerunner_authentication_help($path, $arg)
+{
+	$authentication_help = t('Leaguerunner authentication allows authentication against a Leaguerunner
+		installation running on the same host');
 
-function ldap_authentication_help($path, $arg) {
+	switch ($path) {
+		case 'admin/config/people/leaguerunner/authentication':
+			$output = '<p>' . $authentication_help . '</p>';
+			return $output;
 
-  $authentication_help = t('LDAP authentication allows authentication against an LDAP server.  It
-        may be used alongside other authentication means such as built in drupal authentication,
-        open id, etc.  More detailed help is available on drupal.org at !helplink.',
-          array(
-            '!helplink' => l(LDAP_SERVERS_DRUPAL_HELP_URL, LDAP_SERVERS_DRUPAL_HELP_URL),
-          ));
-
-  switch ($path) {
-    case 'admin/config/people/ldap/authentication':
-      $output = '<p>' . $authentication_help . '</p>';
-      return $output;
-
-    case 'admin/help#ldap_authentication':
-      $output = '<p>' . $authentication_help . '</p>';
-      return $output;
-  }
+		case 'admin/help#leaguerunner_authentication':
+			$output = '<p>' . $authentication_help . '</p>';
+			return $output;
+	}
 }
 
 /**
  * Implements hook_info().
  */
-function ldap_authentication_info($field = 0) {
-  $info['name']= 'ldap_authentication';
-  $info['protocol'] = 'LDAP';
+function leaguerunner_authentication_info($field = 0)
+{
+	$info['name']     = 'leaguerunner_authentication';
+	$info['protocol'] = 'LDAP';
 
-  if ($field) {
-    return $info[$field];
-  }
+	if ($field) {
+		return $info[$field];
+	}
 
-  return $info;
+	return $info;
 }
 
 
@@ -80,49 +65,40 @@ function ldap_authentication_info($field = 0) {
  *
  * @param object $user
  * @return boolean
- *    true if user is recorded as ldap authenticated and identified (ldap_authentified)
- *
- * notes to developers
- * -  make user object explicit for clarity; don't default to current user as admins could be editing profile pages
- * -  don't use $user->data['ldap_authentified'] as it is geared toward ldap_authentication data, not where the user is currently ldap authenticated
- * -
+ *    true if user is recorded as leaguerunner authenticated and identified 
  */
-function ldap_authentication_ldap_authenticated($user) {
+function leaguerunner_authentication_leaguerunner_authenticated($user)
+{
+	if (is_numeric($user)) {
+		$user = @user_load((int)$user);
+	}
+	if (!is_object($user) || $user->uid == 0) {
+		return FALSE;
+	}
 
-  if (is_numeric($user)) {
-    $user = @user_load((int)$user);
-  }
-  if (!is_object($user) || $user->uid == 0) {
-    return FALSE;
-  }
-
-  $authmaps = user_get_authmaps($user->name);
-  return isset($authmaps['ldap_authentication']);
-
+	$authmaps = user_get_authmaps($user->name);
+	return isset($authmaps['leaguerunner_authentication']);
 }
 
-function ldap_authentication_show_reset_pwd($user = NULL) {
+function leaguerunner_authentication_show_reset_pwd($user = NULL)
+{
+	if (!$user) {
+		global $user;
+	}
 
-  if (!$user) {
-    global $user;
-  }
+	if (current_path() == 'user/password' || $user->uid == 1) {
+		// always show at user/passwordurl. otherwise user 1 will not be able to reset password.
+		// LDAP_authen.login_forms.MM.user1, LDAP_authen.login_forms.EM.user1
+		return TRUE;
+	}
 
-  if (current_path() == 'user/password' || $user->uid == 1) {
-    return TRUE;
-   // always show at user/passwordurl. otherwise user 1 will not be able to reset password.
-   // LDAP_authen.login_forms.MM.user1, LDAP_authen.login_forms.EM.user1
-  }
-
-  if ($user->uid == 0) {
-    // hide reset password for anonymous users
-    return FALSE;
-  }
-  else {
-    // authenticated user.  hide if ldap authenticated otherwise show.
-    // LDAP_authen.login_forms.EM.ldap, LDAP_authen.login_forms.EM.drupal,
-    // LDAP_authen.login_forms.MM.drupal, LDAP_authen.login_forms.MM.ldap
-    return (!ldap_authentication_ldap_authenticated($user));
-  }
+	if ($user->uid == 0) {
+		// hide reset password for anonymous users
+		return FALSE;
+	} else {
+		// authenticated user.  hide if leaguerunner authenticated otherwise show.
+		return (!leaguerunner_authentication_leaguerunner_authenticated($user));
+	}
 
 }
 
@@ -130,77 +106,107 @@ function ldap_authentication_show_reset_pwd($user = NULL) {
  * Implements hook_form_FORM_ID_alter().
  */
 
-function ldap_authentication_form_user_pass_alter(&$form, $form_state) {
-  // the following could be in a theme preproces function
-  $form['ldap_warning'] = array(
-     '#type' => 'item',
-     '#markup' => theme('ldap_authentication_user_pass_message'),
-     '#weight' => 10,
-      );
+function leaguerunner_authentication_form_user_pass_alter(&$form, $form_state)
+{
+	// the following could be in a theme preproces function
+	$form['leaguerunner_warning'] = array(
+		'#type' => 'item',
+		'#markup' => theme('leaguerunner_authentication_user_pass_message'),
+		'#weight' => 10,
+	);
 
-  // need to insert before user_pass_validate
-  array_unshift($form['#validate'], 'ldap_authentication_user_pass_validate');
+	// need to insert before user_pass_validate
+	array_unshift($form['#validate'], 'leaguerunner_authentication_user_pass_validate');
 }
 
 
-function ldap_authentication_user_pass_validate(&$form_state) {
-  $name_or_mail = trim($form_state['name']['#value']);
-  if ($account = user_load_by_mail($name_or_mail)) {
+function leaguerunner_authentication_user_pass_validate(&$form_state)
+{
+	$name_or_mail = trim($form_state['name']['#value']);
+	if (! $account = user_load_by_mail($name_or_mail)) {
+		$account = user_load_by_name($name_or_mail);
+	}
 
-  }
-  else {
-    $account = user_load_by_name($name_or_mail);
-  }
-
-  if (ldap_authentication_ldap_authenticated($account)) {
-    $vars = array(
-      'account' => $account,
-      'auth_conf' => ldap_authentication_get_valid_conf(),
-    );
-    form_set_error('name', theme('ldap_authentication_user_pass_validate_ldap_authenticated', $vars));
-  }
-}
-/**
- * Implements hook_form_FORM_ID_alter().
- */
-
-function ldap_authentication_form_user_register_alter(&$form, $form_state) {
-
+	if (leaguerunner_authentication_leaguerunner_authenticated($account)) {
+		form_set_error('name', theme('leaguerunner_authentication_user_pass_validate_leaguerunner_authenticated'));
+	}
 }
 
 /**
  * Implements hook_form_FORM_ID_alter(). for user_profile_form
  */
-function ldap_authentication_form_user_profile_form_alter(&$form, $form_state) {
-  // keep in mind admin may be editing another users profile form.  don't assume current global $user
-  if (ldap_authentication_ldap_authenticated($form['#user'])) {
-    // Always hide email field; it's a Leaguerunner preference to enable
-    // viewing based on user permissions and team membership, so we don't
-    // want to display in Drupal.
-    $form['account']['mail']['#type'] = 'hidden';
+function leaguerunner_authentication_form_user_profile_form_alter(&$form, $form_state)
+{
+	// keep in mind admin may be editing another users profile form.  don't assume current global $user
+	if (leaguerunner_authentication_leaguerunner_authenticated($form['#user'])) {
+		// Always hide email field; it's a Leaguerunner preference to enable
+		// viewing based on user permissions and team membership, so we don't
+		// want to display in Drupal.
+		$form['account']['mail']['#type'] = 'hidden';
 
-    if (!ldap_authentication_show_reset_pwd($form['#user'])) {
-      $form['account']['current_pass']['#disabled'] = TRUE;
-      $form['account']['pass']['#disabled'] = TRUE;
-    }
-  }
+		if (!leaguerunner_authentication_show_reset_pwd($form['#user'])) {
+			$form['account']['current_pass']['#disabled'] = TRUE;
+			$form['account']['pass']['#disabled'] = TRUE;
+		}
+	}
 }
 
 
 /**
  * Implements hook_form_FORM_ID_alter(). for user_login
  */
-function ldap_authentication_form_user_login_alter(&$form, &$form_state) {
-  _ldap_authentication_login_form_alter($form, $form_state, 'user_login');
-
+function leaguerunner_authentication_form_user_login_alter(&$form, &$form_state) {
+	_leaguerunner_authentication_login_form_alter($form, $form_state, 'user_login');
 }
 
 /**
  * Implements hook_form_FORM_ID_alter(). for user_login_block
  */
-function ldap_authentication_form_user_login_block_alter(&$form, &$form_state) {
-  _ldap_authentication_login_form_alter($form, $form_state, 'user_login_block');
+function leaguerunner_authentication_form_user_login_block_alter(&$form, &$form_state) {
+	_leaguerunner_authentication_login_form_alter($form, $form_state, 'user_login_block');
+}
 
+/**
+ * hook_user is gone in drupal 7 so functionality can be replaced by
+ * altering login form submit and validate functions
+ * http://drupal.org/update/modules/6/7#remove_op
+ *
+ * if form is being generated on non https and is set in preferences, set warning and end form development
+ *   add submit functions to form
+ *   - make sure submit function is in the correct order; that is if leaguerunner precedes drupal, make _leaguerunner_authn_login_form_submit first.
+ *   do not remove other authentication submit functions, just reorder.
+ */
+function _leaguerunner_authentication_login_form_alter(&$form, &$form_state, $form_id)
+{
+	/**
+	 * add validate function to test for leaguerunner authentication
+	 * should be placed after user_login_authenticate_validate
+	 * 1. user_login_name_validate
+	 * 2. user_login_authenticate_validate
+	 * 3. external authentication validate functions
+	 * 4. user_login_final_validate
+	 *
+	 * as articulated above user_login_default_validators() in user.module
+	 *
+	 * without any other external authentication modules, this array will start out as:
+	 *    array('user_login_name_validate', 'user_login_authenticate_validate', 'user_login_final_validate')
+	 */
+	if (@in_array('user_login_authenticate_validate', $form['#validate'])) {
+		$new_validation_sequence = array();
+		foreach ($form['#validate'] as $validate_function_name) {
+			if ($validate_function_name == 'user_login_authenticate_validate') {
+				$new_validation_sequence[] = 'user_login_authenticate_validate';
+				$new_validation_sequence[] = 'leaguerunner_authentication_user_login_authenticate_validate';
+			} else {
+				$new_validation_sequence[] = $validate_function_name;
+			}
+		}
+		$form['#validate'] = $new_validation_sequence;
+	}
+
+	if ($form_id == 'user_login_block') {
+		$form['links']['#markup'] = theme('leaguerunner_authentication_user_login_block_links');
+	}
 }
 
 /**
@@ -208,271 +214,184 @@ function ldap_authentication_form_user_login_block_alter(&$form, &$form_state) {
 
  * user form validation will take care of username, pwd fields
  *
- * this may validate if the user exists in ldap in the case of using
- * ldap authentication exclusively
+ * this may validate if the user exists in leaguerunner in the case of using
+ * leaguerunner authentication exclusively
  */
-function ldap_authentication_user_login_authenticate_validate($form, &$form_state) {
-  $detailed_watchdog_log = variable_get('ldap_help_watchdog_detail', 0);
-  $name = $form_state['values']['name'];
-  $pass = $form_state['values']['pass'];
-  $watchdog_tokens = array('%username' => $name);
+function leaguerunner_authentication_user_login_authenticate_validate($form, &$form_state)
+{
+	$detailed_watchdog_log = variable_get('leaguerunner_help_watchdog_detail', 0);
+	$name = $form_state['values']['name'];
+	$pass = $form_state['values']['pass'];
+	$watchdog_tokens = array('%username' => $name);
 
- // if already succeeded at authentication, see if LDAP Exclusive is set
-  if (isset($form_state['uid']) && is_integer($form_state['uid'])) {
-    if ($form_state['uid'] == 1) {
-      if ($detailed_watchdog_log) {
-      watchdog('ldap_authentication', '%username : Previously authenticated as uid=1', $watchdog_tokens, WATCHDOG_DEBUG);
-      }
-      return;  // already passed previous authentication validation
-    } else {
-      if ($detailed_watchdog_log) {
-        watchdog('ldap_authentication', '%username : Previously authenticated in exclusive mode or uid is not 1.  Clear uid
-        in form_state and attempt ldap authentication.',  $watchdog_tokens, WATCHDOG_DEBUG);
-      }
-      $form_state['uid'] = NULL;  // passed previous authentication, but only ldap should be used
-    }
-  }
+	if (isset($form_state['uid']) && is_integer($form_state['uid'])) {
+		if ($form_state['uid'] == 1) {
+			if ($detailed_watchdog_log) {
+				watchdog('leaguerunner_authentication', '%username : Previously authenticated as uid=1', $watchdog_tokens, WATCHDOG_DEBUG);
+			}
+			return;  // already passed previous authentication validation
+		} else {
+			if ($detailed_watchdog_log) {
+				watchdog('leaguerunner_authentication', '%username : Previously authenticated in exclusive mode or uid is not 1.  Clear uid in form_state and attempt leaguerunner authentication.',  $watchdog_tokens, WATCHDOG_DEBUG);
+			}
+			$form_state['uid'] = NULL;  // passed previous authentication, but only leaguerunner should be used
+		}
+	}
 
-  if ($detailed_watchdog_log) {
-    watchdog('ldap_authentication', '%username : user_load_by_name(%username)', $watchdog_tokens, WATCHDOG_DEBUG);
-  }
+	if ($detailed_watchdog_log) {
+		watchdog('leaguerunner_authentication', '%username : user_load_by_name(%username)', $watchdog_tokens, WATCHDOG_DEBUG);
+	}
 
-  $account = user_load_by_name($name);
-  if (is_object($account)) {
-    if ($account->uid == 1) {
-      if ($detailed_watchdog_log) {
-        watchdog('ldap_authentication',  '%username : Drupal username maps to user 1, so do not authenticate with ldap', $watchdog_tokens, WATCHDOG_DEBUG);
-      }
-      return FALSE;  // user 1 must use drupal authentication
-    }
-    else {
-      $account_exists = TRUE;
-      $user_data = $account->data;
-      $authmaps = user_get_authmaps($name);
-      $ldap_authentication_authmap = isset($authmaps['ldap_authentication']);
-      $no_authmaps = (boolean)(count($authmaps));
-      if ($detailed_watchdog_log) {
-        watchdog('ldap_authentication',  '%username : Drupal User Account found.  Continuing on to attempt ldap authentication', $watchdog_tokens, WATCHDOG_DEBUG);
-      }
-    }
-  }
-  else {  // account does not exist
-    $account_exists = FALSE;
-    if ($detailed_watchdog_log) {
-      watchdog('ldap_authentication', '%username : Exisitng Drupal User Account not found.  Continuing on to attempt ldap authentication', $watchdog_tokens, WATCHDOG_DEBUG);
-    }
-  }
+	$account = user_load_by_name($name);
+	if (is_object($account)) {
+		if ($account->uid == 1) {
+			if ($detailed_watchdog_log) {
+				watchdog('leaguerunner_authentication',  '%username : Drupal username maps to user 1, so do not authenticate with leaguerunner', $watchdog_tokens, WATCHDOG_DEBUG);
+			}
+			return FALSE;  // user 1 must use drupal authentication
+		} else {
+			$account_exists = TRUE;
+			$user_data = $account->data;
+			$authmaps = user_get_authmaps($name);
+			$leaguerunner_authentication_authmap = isset($authmaps['leaguerunner_authentication']);
+			if ($detailed_watchdog_log) {
+				watchdog('leaguerunner_authentication',  '%username : Drupal User Account found.  Continuing on to attempt leaguerunner authentication', $watchdog_tokens, WATCHDOG_DEBUG);
+			}
+		}
+	} else {  // account does not exist
+		$account_exists = FALSE;
+		if ($detailed_watchdog_log) {
+			watchdog('leaguerunner_authentication', '%username : Exisitng Drupal User Account not found.  Continuing on to attempt leaguerunner authentication', $watchdog_tokens, WATCHDOG_DEBUG);
+		}
+	}
 
-  // Authenticate
-  $curl = curl_init();
-  curl_setopt($curl, CURLOPT_URL, 'http://www.ocua.ca/leaguerunner/api/2/login');
-  curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
-  curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 1);
+	// Authenticate
+	$curl = curl_init();
+	curl_setopt($curl, CURLOPT_URL, 'http://www.ocua.ca/leaguerunner/api/2/login');
+	curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
+	curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 1);
 
-  curl_setopt($CURL, CURLOPT_POST, TRUE);
-  curl_setopt($curl, CURLOPT_POSTFIELDS, array(
-	'username' => $name,
-	'password' => $pass,
-	'remote_addr' => $_SERVER['REMOTE_ADDR'],
-	'cookie' => session_id(),
-  ));
+	curl_setopt($CURL, CURLOPT_POST, TRUE);
+	curl_setopt($curl, CURLOPT_POSTFIELDS, array(
+		'username' => $name,
+		'password' => $pass,
+		'remote_addr' => $_SERVER['REMOTE_ADDR'],
+		'cookie' => session_id(),
+	));
 
-  if( ! $xml = curl_exec( $curl ) ) {
-    $watchdog_tokens['%sid'] = $sid;
-    $watchdog_tokens['%curl_error'] = curl_error();
-    if ($detailed_watchdog_log) {
-      watchdog('leaguerunner_authentication', '%username : Failed against server %sid with error: %curl_error', $watchdog_tokens, WATCHDOG_DEBUG);
-    }
-    form_set_error('name', 'Failed to authenticate against Leaguerunner');
-    curl_close($curl);
-    return FALSE;
-  }
-  curl_close($curl);
+	if( ! $xml = curl_exec( $curl ) ) {
+		$watchdog_tokens['%sid'] = $sid;
+		$watchdog_tokens['%curl_error'] = curl_error();
+		if ($detailed_watchdog_log) {
+			watchdog('leaguerunner_authentication', '%username : Failed against server %sid with error: %curl_error', $watchdog_tokens, WATCHDOG_DEBUG);
+		}
+		form_set_error('name', 'Failed to authenticate against Leaguerunner');
+		curl_close($curl);
+		return FALSE;
+	}
+	curl_close($curl);
 
-  // Check result
-  $xmlObj = simplexml_load_string($xml);
-  if( ! $xmlObj->status == 'ok' ) {
-    form_set_error('name', 'Login failed: ' . $xmlObj->error);
-    return FALSE;
-  }
+	// Check result
+	$xmlObj = simplexml_load_string($xml);
+	if( ! $xmlObj->status == 'ok' ) {
+		form_set_error('name', 'Login failed: ' . $xmlObj->error);
+		return FALSE;
+	}
 
-  // OK, we're in, and have XML data containing the user's full name and possibly other info
+	// OK, we're in, and have XML data containing the user's full name and possibly other info
 
-  /**
-   * case 1: previously drupal authenticated user authenticated successfully on ldap
-   *
-   */
-  if (!$account_exists) {
-    /**
-     *
-     * new ldap_authentication provisioned account could let user_external_login_register create the account and set authmaps, but would need
-     * to add mail and any other user->data data in hook_user_presave which would mean requerying ldap
-     * or having a global variable.  At this point the account does not exist, so there is no
-     * reason not to create it here.
-     *
-     * @todo create patch for user_external_login_register to deal with new external accounts
-     *       a little tweak to add user->data and mail etc as parameters would make it more useful
-     *       for external authentication modules
-     */
-    require_once(drupal_get_path('module', 'ldap_servers') . '/ldap_servers.functions.inc');
-    /// TODO TODO TODO
-    $account = ldap_create_drupal_account($name, $ldap_user['mail'], $ldap_user['dn'], $sid);
-    if ($account === FALSE) {
-      // need to throw error that account was not created
-    }
+	/**
+	* case 1: previously drupal authenticated user authenticated successfully on leaguerunner
+	*
+	*/
+	if (!$account_exists) {
+		/**
+		 *
+		 * new leaguerunner_authentication provisioned account could let user_external_login_register create the account and set authmaps, but would need
+		 * to add mail and any other user->data data in hook_user_presave which would mean requerying ldap
+		 * or having a global variable.  At this point the account does not exist, so there is no
+		 * reason not to create it here.
+		 *
+		 * @todo create patch for user_external_login_register to deal with new external accounts
+		 *       a little tweak to add user->data and mail etc as parameters would make it more useful
+		 *       for external authentication modules
+		 */
+		require_once(drupal_get_path('module', 'ldap_servers') . '/ldap_servers.functions.inc');
+		/// TODO TODO TODO  This isn't ldap.... 
+		$account = ldap_create_drupal_account($name, $ldap_user['mail'], $ldap_user['dn'], $sid);
+		if ($account === FALSE) {
+			// TODO need to throw error that account was not created
+		}
+	} else {  // account already exists
+		if ($leaguerunner_authentication_authmap == FALSE) {  // LDAP_authen.AC.disallow.leaguerunner.drupal
+			// add leaguerunner_authentication authmap to user.  account name is fine here, though cn could be used
+			user_set_authmaps($account, array('authname_leaguerunner_authentication' => $name));
+			if ($detailed_watchdog_log) {
+				watchdog('leaguerunner_authentication', 'set authmap for %username authname_leaguerunner_authentication', $watchdog_tokens, WATCHDOG_DEBUG);
+			}
+		}
+	}
 
-
-  }
-  else {  // account already exists
-    if ($ldap_authentication_authmap == FALSE) {  // LDAP_authen.AC.disallow.ldap.drupal
-      // add ldap_authentication authmap to user.  account name is fine here, though cn could be used
-      user_set_authmaps($account, array('authname_ldap_authentication' => $name));
-      if ($detailed_watchdog_log) {
-          watchdog('ldap_authentication', 'set authmap for %username authname_ldap_authentication', $watchdog_tokens, WATCHDOG_DEBUG);
-      }
-    }
-  }
-
-  /**
-  * we now have valid, ldap authenticated username with an account authmapped to ldap_authentication.
-  * since user_external_login_register can't deal with user mail attribute and doesn't do much else, it is not
-  * being used here.
-  */
+	/**
+	* we now have valid, leaguerunner authenticated username with an account authmapped to leaguerunner_authentication.
+	* since user_external_login_register can't deal with user mail attribute and doesn't do much else, it is not
+	* being used here.
+	*/
 
 
-  /**
-   * without doing the user_login_submit,
-   * [#1009990]
-   *
-   */
-  $fake_form_state['uid'] = $account->uid;
+	/**
+	* without doing the user_login_submit,
+	* [#1009990]
+	*
+	*/
+	$fake_form_state['uid'] = $account->uid;
 
-  user_login_submit(array(), $fake_form_state);
-  global $user;
-  $form_state['uid'] = $user->uid;
-  return;
-
-}
-
-/**
- * @file
- * ldap_authn provides authentication against ldap server.
- */
-
-/**
-  * helper function for ldap_authn_form_user_login_block_alter and ldap_authn_form_user_login_alter
-  *
-  * hook_user is gone in drupal 7 so functionality can be replaced by
-  * altering login form submit and validate functions
-  * http://drupal.org/update/modules/6/7#remove_op
-  *
-  * if form is being generated on non https and is set in preferences, set warning and end form development
-  *   add submit functions to form
-  *   - make sure submit function is in the correct order; that is if ldap precedes drupal, make _ldap_authn_login_form_submit first.
-  *   do not remove other authentication submit functions, just reorder.
-  */
-function _ldap_authentication_login_form_alter(&$form, &$form_state, $form_id) {
-
-  /**
-   *
-   * add validate function to test for ldap authentication
-   * should be placed after user_login_authenticate_validate
-   * 1. user_login_name_validate
-   * 2. user_login_authenticate_validate
-   * 3. external authentication validate functions
-   * 4. user_login_final_validate
-   *
-   * as articulated above user_login_default_validators() in user.module
-   *
-   * without any other external authentication modules, this array will start out as:
-   *    array('user_login_name_validate', 'user_login_authenticate_validate', 'user_login_final_validate')
-   */
-
-  if (@in_array('user_login_authenticate_validate', $form['#validate'])) {
-    $new_validation_sequence = array();
-    foreach ($form['#validate'] as $validate_function_name) {
-      if ($validate_function_name == 'user_login_authenticate_validate') {
-          $new_validation_sequence[] = 'user_login_authenticate_validate';
-          $new_validation_sequence[] = 'ldap_authentication_user_login_authenticate_validate';
-      }
-      else {
-        $new_validation_sequence[] = $validate_function_name;
-      }
-    }
-  $form['#validate'] = $new_validation_sequence;
-  }
-
-  if ($form_id == 'user_login_block') {
-    $user_register = variable_get('user_register', USER_REGISTER_VISITORS_ADMINISTRATIVE_APPROVAL);
-    $vars = array(
-      'show_reset_pwd' => ldap_authentication_show_reset_pwd(),
-      'auth_conf' => $auth_conf,
-      );
-
-    $form['links']['#markup'] = theme('ldap_authentication_user_login_block_links', $vars);
-  }
+	user_login_submit(array(), $fake_form_state);
+	global $user;
+	$form_state['uid'] = $user->uid;
+	return;
 }
 
 /**
  * Returns HTML for user login block links.
- * @param $variables
- *   An associative array containing:
- *   - hide_reset_pwd (boolean) whether reset password link should be visible
- *   - auth_conf: object with ldap authentication configuration data
+ * @param none
  *
  * @ingroup themeable
  */
-function theme_ldap_authentication_user_login_block_links($variables) {
-  extract($variables);
+function theme_leaguerunner_authentication_user_login_block_links()
+{
+	$lr_base = 'http://www.ocua.ca/leaguerunner';
 
- // the code below modified from user.module user_login_block function
-  $items = array();
-  if (variable_get('user_register', USER_REGISTER_VISITORS_ADMINISTRATIVE_APPROVAL)) {
-    $items[] = l(t('Create new account'), 'user/register', array('attributes' => array('title' => t('Create a new user account.'))));
-  }
-  if ($show_reset_pwd) {
-    $items[] = l(t('Request new password'), 'user/password', array('attributes' => array('title' => t('Request new password via e-mail.'))));
-  }
-  elseif ($auth_conf->ldapUserHelpLinkUrl) {
-    $items[] = l(t($auth_conf->ldapUserHelpLinkText), $auth_conf->ldapUserHelpLinkUrl);
-  }
+	$items = array(
+		l(t('Create new account'), "$lr_base/person/create", array('attributes' => array('title' => t('Create a new user account.')))),
+		l(t('Request new password'), "$lr_base/person/forgotpassword", array('attributes' => array('title' => t('Request new password via e-mail.')))),
+	);
 
-  $output = theme('item_list', array('items' => $items));
-  return $output;
+	return theme('item_list', array('items' => $items));
 }
 
 /**
  * Returns HTML warning text for request new password/password reset form.
- * @param $variables
- *   An associative array containing:
- *   - auth_conf: object with ldap authentication configuration data
+ * @param none
  *
  * @ingroup themeable
  */
-function theme_ldap_authentication_user_pass_message($variables) {
-  return t('This page is only useful for the site administrator.  All other users need to reset their passwords in Leaguerunner');
+function theme_leaguerunner_authentication_user_pass_message()
+{
+	return t('This page is only useful for the site administrator.  All other users need to reset their passwords in Leaguerunner');
 }
 
 /**
- * Returns HTML warning text when an ldap authenticated user tries to reset their password.
- * @param $variables
- *   An associative array containing:
- *   - auth_conf: object with ldap authentication configuration data
- *   - account: user object
+ * Returns HTML warning text when an leaguerunner authenticated user tries to reset their password.
+ * @param none
  *
  * @ingroup themeable
  */
-function theme_ldap_authentication_user_pass_validate_ldap_authenticated($variables) {
-  extract($variables);
-  // already know user exists and is ldap authenticated
+function theme_leaguerunner_authentication_user_pass_validate_leaguerunner_authenticated ( )
+{
+	// already know user exists and is leaguerunner authenticated
 
-  if ($auth_conf->ldapUserHelpLinkUrl) {
-    $msg = t('You may not reset your password here.  You must reset your password via the directions at')
-    . ' ' . l(t($auth_conf->ldapUserHelpLinkText), $auth_conf->ldapUserHelpLinkUrl);
-  }
-  else {
-    $msg = t('You may not reset your password here.  You must reset your password via one of your
-      organization\'s password management sites.');
-  }
-  return $msg;
+	$lr_pw_reset = 'http://www.ocua.ca/leaguerunner/person/forgotpassword';
+	return t('You may not reset your password here.  You must reset your password via the directions at')
+		. ' ' . l($lr_pw_reset, $lr_pw_reset);
 }
