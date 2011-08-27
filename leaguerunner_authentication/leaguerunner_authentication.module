@@ -280,10 +280,9 @@ function leaguerunner_authentication_user_login_authenticate_validate($form, &$f
 	));
 
 	if( ! $xml = curl_exec( $curl ) ) {
-		$watchdog_tokens['%sid'] = $sid;
 		$watchdog_tokens['%curl_error'] = curl_error();
 		if ($detailed_watchdog_log) {
-			watchdog('leaguerunner_authentication', '%username : Failed against server %sid with error: %curl_error', $watchdog_tokens, WATCHDOG_DEBUG);
+			watchdog('leaguerunner_authentication', '%username : Failed with error: %curl_error', $watchdog_tokens, WATCHDOG_DEBUG);
 		}
 		form_set_error('name', 'Failed to authenticate against Leaguerunner');
 		curl_close($curl);
@@ -308,23 +307,18 @@ function leaguerunner_authentication_user_login_authenticate_validate($form, &$f
 		/**
 		 *
 		 * new leaguerunner_authentication provisioned account could let user_external_login_register create the account and set authmaps, but would need
-		 * to add mail and any other user->data data in hook_user_presave which would mean requerying ldap
-		 * or having a global variable.  At this point the account does not exist, so there is no
-		 * reason not to create it here.
-		 *
-		 * @todo create patch for user_external_login_register to deal with new external accounts
-		 *       a little tweak to add user->data and mail etc as parameters would make it more useful
-		 *       for external authentication modules
+		 * to add mail and any other user->data data in
+		 * hook_user_presave which would mean requerying the db or
+		 * having a global variable.  At this point the account does
+		 * not exist, so there is no reason not to create it here.
 		 */
-		require_once(drupal_get_path('module', 'ldap_servers') . '/ldap_servers.functions.inc');
-		/// TODO TODO TODO  This isn't ldap.... 
-		$account = ldap_create_drupal_account($name, $ldap_user['mail'], $ldap_user['dn'], $sid);
+		$account = leaguerunner_create_drupal_account($name, $xmlObj->mail);
 		if ($account === FALSE) {
 			// TODO need to throw error that account was not created
 		}
 	} else {  // account already exists
 		if ($leaguerunner_authentication_authmap == FALSE) {  // LDAP_authen.AC.disallow.leaguerunner.drupal
-			// add leaguerunner_authentication authmap to user.  account name is fine here, though cn could be used
+			// add leaguerunner_authentication authmap to user.  account name is fine here
 			user_set_authmaps($account, array('authname_leaguerunner_authentication' => $name));
 			if ($detailed_watchdog_log) {
 				watchdog('leaguerunner_authentication', 'set authmap for %username authname_leaguerunner_authentication', $watchdog_tokens, WATCHDOG_DEBUG);
@@ -350,6 +344,32 @@ function leaguerunner_authentication_user_login_authenticate_validate($form, &$f
 	global $user;
 	$form_state['uid'] = $user->uid;
 	return;
+}
+
+/**
+ * returns new user account if created, otherwise integer error message
+ */
+function leaguerunner_create_drupal_account($name, $mail, $edit = array())
+{
+	$edit['name'] = $name;
+	$edit['pass'] = user_password(20);
+	$edit['mail'] = $mail;
+	$edit['init'] = $mail;
+	$edit['status'] = 1;
+
+	// save 'init' data to know the origin of the leaguerunner authentication provisioned account
+	$edit['data']['leaguerunner_authentication']['init'] = array(
+		'name' => $name,
+		'mail' => $mail,
+	);
+
+	if (!$account = user_save( NULL, $edit)) {
+		drupal_set_message(t('User account creation failed because of system problems.'), 'error');
+		return FALSE;
+	} else {
+		user_set_authmaps($account, array('authname_leaguerunner_authentication' => $name));
+	}
+	return $account;
 }
 
 /**
