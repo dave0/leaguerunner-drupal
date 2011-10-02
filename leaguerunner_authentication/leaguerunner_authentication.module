@@ -137,17 +137,16 @@ function leaguerunner_authentication_user_pass_validate(&$form_state)
  */
 function leaguerunner_authentication_form_user_profile_form_alter(&$form, $form_state)
 {
-	// keep in mind admin may be editing another users profile form.  don't assume current global $user
-	if (leaguerunner_authentication_leaguerunner_authenticated($form['#user'])) {
-		// Always hide email field; it's a Leaguerunner preference to enable
-		// viewing based on user permissions and team membership, so we don't
-		// want to display in Drupal.
-		$form['account']['mail']['#type'] = 'hidden';
+	// Always remove email field; it's a Leaguerunner preference to enable
+	// viewing based on user permissions and team membership, so we don't
+	// want to display in Drupal.
+	unset($form['account']['mail']);
 
-		if (!leaguerunner_authentication_show_reset_pwd($form['#user'])) {
-			$form['account']['current_pass']['#disabled'] = TRUE;
-			$form['account']['pass']['#disabled'] = TRUE;
-		}
+	// Conditionally remove the password change fields, if this is a
+	// LR-authed user.
+	if (!leaguerunner_authentication_show_reset_pwd($form['#user'])) {
+		unset($form['account']['current_pass']);
+		unset($form['account']['pass']);
 	}
 }
 
