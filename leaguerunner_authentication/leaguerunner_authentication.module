@@ -137,16 +137,21 @@ function leaguerunner_authentication_user_pass_validate(&$form_state)
  */
 function leaguerunner_authentication_form_user_profile_form_alter(&$form, $form_state)
 {
-	// Always remove email field; it's a Leaguerunner preference to enable
-	// viewing based on user permissions and team membership, so we don't
-	// want to display in Drupal.
-	unset($form['account']['mail']);
 
-	// Conditionally remove the password change fields, if this is a
-	// LR-authed user.
-	if (!leaguerunner_authentication_show_reset_pwd($form['#user'])) {
-		unset($form['account']['current_pass']);
-		unset($form['account']['pass']);
+	// keep in mind admin may be editing another users profile form.  don't assume current global $user
+	if (leaguerunner_authentication_leaguerunner_authenticated($form['#user'])) {
+		// Always hide email field; it's a Leaguerunner preference to enable
+		// viewing based on user permissions and team membership, so we don't
+		// want to display in Drupal.
+		$form['account']['mail']['#type'] = 'hidden';
+
+
+		// Conditionally remove the password change fields, if this is a
+		// LR-authed user.
+		if (!leaguerunner_authentication_show_reset_pwd($form['#user'])) {
+			unset($form['account']['current_pass']);
+			unset($form['account']['pass']);
+		}
 	}
 }
 
@@ -316,18 +321,21 @@ function leaguerunner_authentication_user_login_authenticate_validate($form, &$f
 		 * having a global variable.  At this point the account does
 		 * not exist, so there is no reason not to create it here.
 		 */
-		$account = leaguerunner_create_drupal_account($name, $xmlObj->auth->mail);
+		$account = leaguerunner_create_drupal_account($name, $xmlObj->auth );
 		if ($account === FALSE) {
 			// TODO need to throw error that account was not created
 		}
 	} else {  // account already exists
-		if ($leaguerunner_authentication_authmap == FALSE) {  // LDAP_authen.AC.disallow.leaguerunner.drupal
+		if ($leaguerunner_authentication_authmap == FALSE) {
 			// add leaguerunner_authentication authmap to user.  account name is fine here
 			user_set_authmaps($account, array('authname_leaguerunner_authentication' => $name));
 			if ($detailed_watchdog_log) {
 				watchdog('leaguerunner_authentication', 'set authmap for %username authname_leaguerunner_authentication', $watchdog_tokens, WATCHDOG_DEBUG);
 			}
 		}
+
+		// Update the Drupal db with any changed LR data
+		leaguerunner_update_drupal_account($account, $xmlObj->auth);
 	}
 
 	/**
@@ -353,25 +361,48 @@ function leaguerunner_authentication_user_login_authenticate_validate($form, &$f
 /**
  * returns new user account if created, otherwise integer error message
  */
-function leaguerunner_create_drupal_account($name, $mail, $edit = array())
+function leaguerunner_create_drupal_account($name, $userinfo, $edit = array())
 {
+	# Forced stringification to avoid SimpleXMLObject serialization later
+	$mail = '' . $userinfo->mail;
+	$fullname = $userinfo->firstname . ' ' . $userinfo->lastname;
+
 	$edit['name'] = $name;
 	$edit['pass'] = user_password(20);
 	$edit['mail'] = $mail;
 	$edit['init'] = $mail;
+
+	// TODO: must have Field module configured with a field_fullname.
+	// should this module force in its own field name?
+	$edit['field_fullname'] = array( 'und' => array( '0' => array('value' => $fullname )));
 	$edit['status'] = 1;
 
 	// save 'init' data to know the origin of the leaguerunner authentication provisioned account
 	$edit['data']['leaguerunner_authentication']['init'] = array(
 		'name' => $name,
-		'mail' => $mail,
+		'mail' => $mail
 	);
 
-	if (!$account = user_save( NULL, $edit)) {
+	if (!$account = user_update( NULL, $edit)) {
 		drupal_set_message(t('User account creation failed because of system problems.'), 'error');
 		return FALSE;
-	} else {
-		user_set_authmaps($account, array('authname_leaguerunner_authentication' => $name));
+	}
+	return $account;
+}
+
+function leaguerunner_update_drupal_account($account, $userinfo, $edit = array())
+{
+	# Forced stringification to avoid SimpleXMLObject serialization later
+	$edit['mail'] = '' . $userinfo->mail;
+
+	// TODO: must have Field module configured with a field_fullname.
+	// should this module force in its own field name?
+	$fullname = $userinfo->firstname . ' ' . $userinfo->lastname;
+	$edit['field_fullname'] = array( 'und' => array( '0' => array('value' => $fullname )));
+
+	if (!$account = user_save( $account, $edit)) {
+		drupal_set_message(t('User account update failed because of system problems.'), 'error');
+		return FALSE;
 	}
 	return $account;
 }
