@@ -51,7 +51,7 @@ function leaguerunner_authentication_help($path, $arg)
 function leaguerunner_authentication_info($field = 0)
 {
 	$info['name']     = 'leaguerunner_authentication';
-	$info['protocol'] = 'LDAP';
+	$info['protocol'] = 'HTTP';
 
 	if ($field) {
 		return $info[$field];
@@ -271,7 +271,7 @@ function leaguerunner_authentication_user_login_authenticate_validate($form, &$f
 	curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
 	curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 1);
 
-	curl_setopt($CURL, CURLOPT_POST, TRUE);
+	curl_setopt($curl, CURLOPT_POST, TRUE);
 	curl_setopt($curl, CURLOPT_POSTFIELDS, array(
 		'username' => $name,
 		'password' => $pass,
@@ -292,10 +292,15 @@ function leaguerunner_authentication_user_login_authenticate_validate($form, &$f
 
 	// Check result
 	$xmlObj = simplexml_load_string($xml);
-	if( ! $xmlObj->status == 'ok' ) {
-		form_set_error('name', 'Login failed: ' . $xmlObj->error);
+	if( ! $xmlObj ) {
+		form_set_error('name', 'Login failed: no XML result obtained');
 		return FALSE;
 	}
+	if( $xmlObj->auth->status != 'ok' ) {
+		form_set_error('name', 'Login failed: ' . $xmlObj->auth->error);
+		return FALSE;
+	}
+
 
 	// OK, we're in, and have XML data containing the user's full name and possibly other info
 
@@ -312,7 +317,7 @@ function leaguerunner_authentication_user_login_authenticate_validate($form, &$f
 		 * having a global variable.  At this point the account does
 		 * not exist, so there is no reason not to create it here.
 		 */
-		$account = leaguerunner_create_drupal_account($name, $xmlObj->mail);
+		$account = leaguerunner_create_drupal_account($name, $xmlObj->auth->mail);
 		if ($account === FALSE) {
 			// TODO need to throw error that account was not created
 		}
