@@ -383,7 +383,7 @@ function leaguerunner_create_drupal_account($name, $userinfo, $edit = array())
 		'mail' => $mail
 	);
 
-	if (!$account = user_update( NULL, $edit)) {
+	if (!$account = user_save( NULL, $edit)) {
 		drupal_set_message(t('User account creation failed because of system problems.'), 'error');
 		return FALSE;
 	}
