@@ -450,3 +450,5 @@ function theme_leaguerunner_authentication_user_pass_validate_leaguerunner_authe
 	return t('You may not reset your password here.  You must reset your password via the directions at')
 		. ' ' . l($lr_pw_reset, $lr_pw_reset);
 }
+
+?>

@@ -1,0 +1,19 @@
+<?php
+/**
+ * @file
+ * Install, update and uninstall functions for the Leaguerunner blocks module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function leaguerunner_blocks_install() {
+
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function leaguerunner_blocks_uninstall() {
+  variable_del('leaguerunner_blocks_conf');
+}
