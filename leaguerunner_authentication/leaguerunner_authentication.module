@@ -213,6 +213,39 @@ function _leaguerunner_authentication_login_form_alter(&$form, &$form_state, $fo
 	}
 }
 
+function _curl_request( $url, $cookie, $postfields = null )
+{
+	// Authenticate
+	$curl = curl_init();
+	curl_setopt($curl, CURLOPT_URL, $url);
+	curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
+	curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 1);
+
+
+	// TODO: Configurable cookie name?
+	curl_setopt($curl, CURLOPT_COOKIE, 'leaguerunner=' . $cookie);
+
+	if( ! empty($postfields) ) {
+		curl_setopt($curl, CURLOPT_POST, TRUE);
+		curl_setopt($curl, CURLOPT_POSTFIELDS, $postfields );
+	}
+
+	if( ! $xml = curl_exec( $curl ) ) {
+		$watchdog_tokens['%curl_error'] = curl_error();
+		if ($detailed_watchdog_log) {
+			watchdog('leaguerunner_authentication', '%username : Failed with error: %curl_error', $watchdog_tokens, WATCHDOG_DEBUG);
+		}
+		form_set_error('name', 'Failed to authenticate against Leaguerunner');
+		curl_close($curl);
+		return FALSE;
+	}
+	curl_close($curl);
+
+	$xmlObj = simplexml_load_string($xml);
+
+	return $xmlObj;
+}
+
 /**
  * validate function for user logon forms.
 
@@ -265,37 +298,26 @@ function leaguerunner_authentication_user_login_authenticate_validate($form, &$f
 	} else {  // account does not exist
 		$account_exists = FALSE;
 		if ($detailed_watchdog_log) {
-			watchdog('leaguerunner_authentication', '%username : Exisitng Drupal User Account not found.  Continuing on to attempt leaguerunner authentication', $watchdog_tokens, WATCHDOG_DEBUG);
+			watchdog('leaguerunner_authentication', '%username : Existing Drupal User Account not found.  Continuing on to attempt leaguerunner authentication', $watchdog_tokens, WATCHDOG_DEBUG);
 		}
 	}
 
-	// Authenticate
-	$curl = curl_init();
-	curl_setopt($curl, CURLOPT_URL, 'http://www.ocua.ca/leaguerunner/api/2/login');
-	curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
-	curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 1);
+	$fields = array(
+		'username'    => $name,
+		'password'    => $pass,
+		'remote_addr' => $_SERVER['REMOTE_ADDR']
+	);
 
-	curl_setopt($curl, CURLOPT_POST, TRUE);
-	curl_setopt($curl, CURLOPT_POSTFIELDS, array(
-		'username' => $name,
-		'password' => $pass,
-		'remote_addr' => $_SERVER['REMOTE_ADDR'],
-		'cookie' => session_id(),
-	));
-
-	if( ! $xml = curl_exec( $curl ) ) {
-		$watchdog_tokens['%curl_error'] = curl_error();
-		if ($detailed_watchdog_log) {
-			watchdog('leaguerunner_authentication', '%username : Failed with error: %curl_error', $watchdog_tokens, WATCHDOG_DEBUG);
-		}
-		form_set_error('name', 'Failed to authenticate against Leaguerunner');
-		curl_close($curl);
-		return FALSE;
+	if( array_key_exists( 'leaguerunner', $_COOKIE ) ) {
+		$lr_session_id = $_COOKIE['leaguerunner'];
 	}
-	curl_close($curl);
+	if( empty($lr_session_id) ) {
+		$lr_session_id = session_id();
+	}
 
+	// TODO: Configurable URL!
+	$xmlObj = _curl_request( 'http://www.ocua.ca/leaguerunner/api/2/login', $lr_session_id, $fields );
 	// Check result
-	$xmlObj = simplexml_load_string($xml);
 	if( ! $xmlObj ) {
 		form_set_error('name', 'Login failed: no XML result obtained');
 		return FALSE;
@@ -304,7 +326,6 @@ function leaguerunner_authentication_user_login_authenticate_validate($form, &$f
 		form_set_error('name', 'Login failed: ' . $xmlObj->auth->error);
 		return FALSE;
 	}
-
 
 	// OK, we're in, and have XML data containing the user's full name and possibly other info
 
@@ -344,6 +365,8 @@ function leaguerunner_authentication_user_login_authenticate_validate($form, &$f
 	* being used here.
 	*/
 
+## TODO: web-configurable cookie domain
+	setrawcookie('leaguerunner', $lr_session_id, 0, '/', '.ocua.ca');
 
 	/**
 	* without doing the user_login_submit,
@@ -451,4 +474,31 @@ function theme_leaguerunner_authentication_user_pass_validate_leaguerunner_authe
 		. ' ' . l($lr_pw_reset, $lr_pw_reset);
 }
 
-?>
+
+/**
+ * Implements hook_user_logout()
+ */
+function leaguerunner_authentication_user_logout($account)
+{
+	user_error('processing user_logout event');
+
+	$lr_session_id = $_COOKIE['leaguerunner'];
+	if( empty($lr_session_id) ) {
+		$lr_session_id = session_id();
+	}
+
+	// TODO: Configurable URL!
+	$xmlObj = _curl_request( 'http://www.ocua.ca/leaguerunner/api/2/logout', $lr_session_id );
+	// Check result
+	if( ! $xmlObj ) {
+		form_set_error('name', 'Logout failed: no XML result obtained');
+		return FALSE;
+	}
+	if( $xmlObj->auth->status != 'ok' ) {
+		form_set_error('name', 'Logout failed: ' . $xmlObj->auth->error);
+		return FALSE;
+	}
+	setrawcookie('leaguerunner', '', time() - 86400, '/', '.ocua.ca');
+
+	return TRUE;
+}
