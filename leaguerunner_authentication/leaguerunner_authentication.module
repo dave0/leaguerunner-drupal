@@ -5,6 +5,43 @@
  */
 
 /**
+ * Implements hook_menu()
+ */
+function leaguerunner_authentication_menu()
+{
+	$items = array();
+
+	$items['admin/config/leaguerunner'] = array(
+		'title' => 'Leaguerunner',
+		'description' => 'Settings for Leaguerunner.',
+		'page callback' => 'system_admin_menu_block_page',
+		'access arguments' => array('access administration pages'),
+		'file' => 'system.admin.inc',
+		'file path' => drupal_get_path('module', 'system')
+	);
+	$items['admin/config/leaguerunner/leaguerunner_authentication'] = array(
+		'title' => 'Leaguerunner settings',
+		'description' => 'Configure relevant settings for Leaguerunner integration',
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('leaguerunner_authentication_admin_settings'),
+		'access arguments' => array('administer site configuration'),
+		'weight' => 0,
+		'file'  => 'leaguerunner_authentication.admin.inc',
+		'file path' => drupal_get_path('module', 'leaguerunner_authentication'),
+		'type' => MENU_NORMAL_ITEM
+
+	);
+	$items['admin/config/leaguerunner/leaguerunner_authentication/default'] = array(
+		'title' => 'Leaguerunner',
+		'type' => MENU_DEFAULT_LOCAL_TASK,
+		'weight' => 0,
+	);
+
+
+	return $items;
+}
+
+/**
  * Implements hook_menu_alter().
  */
 function leaguerunner_authentication_menu_alter(&$items)
@@ -35,7 +72,7 @@ function leaguerunner_authentication_help($path, $arg)
 		installation running on the same host');
 
 	switch ($path) {
-		case 'admin/config/people/leaguerunner/authentication':
+		case 'admin/config/leaguerunner_authentication/settings':
 			$output = '<p>' . $authentication_help . '</p>';
 			return $output;
 
@@ -213,7 +250,7 @@ function _leaguerunner_authentication_login_form_alter(&$form, &$form_state, $fo
 	}
 }
 
-function _get_leaguerunner_cookie
+function _get_leaguerunner_cookie ( )
 {
 	if( array_key_exists( 'leaguerunner', $_COOKIE ) ) {
 		$c = $_COOKIE['leaguerunner'];
@@ -329,7 +366,7 @@ function leaguerunner_authentication_user_login_authenticate_validate($form, &$f
 			'username'    => $name,
 			'password'    => $pass,
 			'remote_addr' => $_SERVER['REMOTE_ADDR']
-		),
+		)
 	);
 
 	// Check result

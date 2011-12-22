@@ -2,9 +2,9 @@ name = Leaguerunner Authentication
 description = "Implements Leaguerunner authentication"
 package = "Leaguerunner"
 ;dependencies[] = 
+version = '7.x-1.0beta1'
 core = 7.x
-configure = admin/config/people/leaguerunner/authentication
+configure = admin/config/leaguerunner/leaguerunner_authentication
 files[] = leaguerunner_authentication.module
 files[] = leaguerunner_authentication.install
-
-; features[variable][] = "leaguerunner_authentication_conf"
+files[] = leaguerunner_authentication.admin.inc

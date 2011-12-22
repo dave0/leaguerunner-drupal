@@ -15,5 +15,6 @@ function leaguerunner_authentication_install() {
  * Implements hook_uninstall().
  */
 function leaguerunner_authentication_uninstall() {
-  variable_del('leaguerunner_authentication_conf');
+  variable_del('leaguerunner_base_url');
+  variable_del('leaguerunner_cookie_domain');
 }
