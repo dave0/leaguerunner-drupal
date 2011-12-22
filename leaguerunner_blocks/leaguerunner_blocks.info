@@ -1,7 +1,0 @@
-name = Leaguerunner Blocks
-description = "Implements Leaguerunner blocks"
-package = "Leaguerunner"
-core = 7.x
-version = "7.x-1.0beta1"
-files[] = leaguerunner_blocks.module
-files[] = leaguerunner_blocks.install

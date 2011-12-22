@@ -563,3 +563,42 @@ function leaguerunner_authentication_user_logout($account)
 
 	return TRUE;
 }
+
+/** 
+ * Blocks
+ */
+
+/**
+ * Implements hook_block_info()
+ */
+function leaguerunner_authentication_block_info() 
+{
+	$blocks['user_games'] = array(
+		'info' => t("Leaguerunner game data for logged-in user"),
+		'cache' => DRUPAL_NO_CACHE
+	);
+
+  	return $blocks;
+}
+
+/**
+ * Implements hook_block_view()
+ */
+function leaguerunner_authentication_block_view ( $delta = '' )
+{
+	$block = array();
+
+	switch ($delta) {
+		case 'user_games':
+			$block["subject"] = strftime("%A %B %e");
+			$block["content"] = '<iframe name="lr_block_iframe" id="lr_block_iframe" width="200" height="200" src="' . _leaguerunner_url('api/1/my/upcoming') . '" align="top" frameborder="0" scrolling="no"></iframe>';
+		break;
+		default:
+			$block['content'] = t('No content available');
+	}
+
+	return $block;
+
+}
+
+?>
