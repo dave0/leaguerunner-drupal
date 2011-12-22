@@ -213,8 +213,26 @@ function _leaguerunner_authentication_login_form_alter(&$form, &$form_state, $fo
 	}
 }
 
-function _curl_request( $url, $cookie, $postfields = null )
+function _get_leaguerunner_cookie
 {
+	if( array_key_exists( 'leaguerunner', $_COOKIE ) ) {
+		$c = $_COOKIE['leaguerunner'];
+	}
+
+	// No value present in 'leaguerunner' cookie, so create a new one
+	if( empty($c) ) {
+		$c = session_id();
+	}
+
+	return $c;
+}
+
+function _curl_request( $url, $cookie = null, $postfields = null )
+{
+	if( is_null($cookie) ) {
+		$cookie = _get_leaguerunner_cookie();
+	}
+
 	// Authenticate
 	$curl = curl_init();
 	curl_setopt($curl, CURLOPT_URL, $url);
@@ -225,7 +243,7 @@ function _curl_request( $url, $cookie, $postfields = null )
 	// TODO: Configurable cookie name?
 	curl_setopt($curl, CURLOPT_COOKIE, 'leaguerunner=' . $cookie);
 
-	if( ! empty($postfields) ) {
+	if( ! is_null($postfields) ) {
 		curl_setopt($curl, CURLOPT_POST, TRUE);
 		curl_setopt($curl, CURLOPT_POSTFIELDS, $postfields );
 	}
@@ -302,21 +320,18 @@ function leaguerunner_authentication_user_login_authenticate_validate($form, &$f
 		}
 	}
 
-	$fields = array(
-		'username'    => $name,
-		'password'    => $pass,
-		'remote_addr' => $_SERVER['REMOTE_ADDR']
-	);
-
-	if( array_key_exists( 'leaguerunner', $_COOKIE ) ) {
-		$lr_session_id = $_COOKIE['leaguerunner'];
-	}
-	if( empty($lr_session_id) ) {
-		$lr_session_id = session_id();
-	}
+	$lr_session_id = _get_leaguerunner_cookie();
 
 	// TODO: Configurable URL!
-	$xmlObj = _curl_request( 'http://www.ocua.ca/leaguerunner/api/2/login', $lr_session_id, $fields );
+	$xmlObj = _curl_request( 'http://www.ocua.ca/leaguerunner/api/2/login',
+		$lr_session_id,
+		array(
+			'username'    => $name,
+			'password'    => $pass,
+			'remote_addr' => $_SERVER['REMOTE_ADDR']
+		),
+	);
+
 	// Check result
 	if( ! $xmlObj ) {
 		form_set_error('name', 'Login failed: no XML result obtained');
@@ -365,7 +380,7 @@ function leaguerunner_authentication_user_login_authenticate_validate($form, &$f
 	* being used here.
 	*/
 
-## TODO: web-configurable cookie domain
+// TODO: web-configurable cookie domain
 	setrawcookie('leaguerunner', $lr_session_id, 0, '/', '.ocua.ca');
 
 	/**
@@ -438,6 +453,7 @@ function leaguerunner_update_drupal_account($account, $userinfo, $edit = array()
  */
 function theme_leaguerunner_authentication_user_login_block_links()
 {
+	# TODO: Web-configurable base URL!
 	$lr_base = 'http://www.ocua.ca/leaguerunner';
 
 	$items = array(
@@ -482,13 +498,8 @@ function leaguerunner_authentication_user_logout($account)
 {
 	user_error('processing user_logout event');
 
-	$lr_session_id = $_COOKIE['leaguerunner'];
-	if( empty($lr_session_id) ) {
-		$lr_session_id = session_id();
-	}
-
 	// TODO: Configurable URL!
-	$xmlObj = _curl_request( 'http://www.ocua.ca/leaguerunner/api/2/logout', $lr_session_id );
+	$xmlObj = _curl_request( 'http://www.ocua.ca/leaguerunner/api/2/logout');
 	// Check result
 	if( ! $xmlObj ) {
 		form_set_error('name', 'Logout failed: no XML result obtained');
