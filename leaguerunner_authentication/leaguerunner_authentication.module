@@ -574,8 +574,12 @@ function leaguerunner_authentication_user_logout($account)
 function leaguerunner_authentication_block_info() 
 {
 	$blocks['user_games'] = array(
-		'info' => t("Leaguerunner game data for logged-in user"),
+		'info' => t("Sidebar block for logged-in user's upcoming games"),
 		'cache' => DRUPAL_NO_CACHE
+	);
+
+	$blocks['games_today'] = array(
+		'info' => t("Banner block for total number of games today"),
 	);
 
   	return $blocks;
@@ -586,19 +590,26 @@ function leaguerunner_authentication_block_info()
  */
 function leaguerunner_authentication_block_view ( $delta = '' )
 {
+	global $user; 
+
 	$block = array();
 
 	switch ($delta) {
 		case 'user_games':
-			$block["subject"] = strftime("%A %B %e");
-			$block["content"] = '<iframe name="lr_block_iframe" id="lr_block_iframe" width="200" height="200" src="' . _leaguerunner_url('api/1/my/upcoming') . '" align="top" frameborder="0" scrolling="no"></iframe>';
-		break;
+			if ($user->uid) {
+				$block['subject'] = 'Upcoming Games';
+				$block['content'] = '<iframe name="lr_block_iframe" id="lr_block_iframe" width="200" height="200" src="' . _leaguerunner_url('api/1/my/upcoming') . '" align="top" frameborder="0" scrolling="no"></iframe>';
+			}
+			break;
+		case 'games_today':
+			$block['subject'] = '';
+			$block['content'] = '<iframe name="games_iframe" id="games_iframe" width="400" height="50" src="' . _leaguerunner_url('api/1/schedule/gamestoday') . '" align="top" frameborder="0" scrolling="no"></iframe>';
+			break;
 		default:
 			$block['content'] = t('No content available');
 	}
 
 	return $block;
-
 }
 
 ?>
