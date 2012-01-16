@@ -205,6 +205,9 @@ function leaguerunner_authentication_form_user_login_alter(&$form, &$form_state)
  */
 function leaguerunner_authentication_form_user_login_block_alter(&$form, &$form_state) {
 	_leaguerunner_authentication_login_form_alter($form, $form_state, 'user_login_block');
+
+	# Also, add appropriate links
+	$form['links']['#markup'] = theme('leaguerunner_authentication_user_login_block_links');
 }
 
 /**
@@ -243,10 +246,6 @@ function _leaguerunner_authentication_login_form_alter(&$form, &$form_state, $fo
 			}
 		}
 		$form['#validate'] = $new_validation_sequence;
-	}
-
-	if ($form_id == 'user_login_block') {
-		$form['links']['#markup'] = theme('leaguerunner_authentication_user_login_block_links');
 	}
 }
 
@@ -546,8 +545,6 @@ function theme_leaguerunner_authentication_user_pass_validate_leaguerunner_authe
  */
 function leaguerunner_authentication_user_logout($account)
 {
-	user_error('processing user_logout event');
-
 	$xmlObj = _curl_request( 'logout');
 
 	// Check result
@@ -610,6 +607,31 @@ function leaguerunner_authentication_block_view ( $delta = '' )
 	}
 
 	return $block;
+}
+
+/**
+ * Display the full name and not the username
+ */
+function leaguerunner_authentication_username_alter ( &$name, $account ) 
+{
+	if( empty($account->uid) ) {
+		// Don't alter anonymous
+		return;
+	}
+
+	$u = $account;
+	if(!  property_exists($u, 'field_fullname') ) {
+		$u = user_load( $u->uid );
+	}
+
+	if(! property_exists($u, 'field_fullname') ) {
+		return;
+	}
+
+	$ary = field_get_items('user', $u, 'field_fullname');
+	if( $ary ) {
+		$name = $ary[0]['value'];
+	}
 }
 
 ?>
