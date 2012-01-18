@@ -180,8 +180,10 @@ function leaguerunner_authentication_form_user_profile_form_alter(&$form, $form_
 		// Always hide email field; it's a Leaguerunner preference to enable
 		// viewing based on user permissions and team membership, so we don't
 		// want to display in Drupal.
-		$form['account']['mail']['#type'] = 'hidden';
+		unset($form['account']['mail']);
 
+		// User is not allowed to edit their full name in Drupal.
+		unset($form['field_fullname']);
 
 		// Conditionally remove the password change fields, if this is a
 		// LR-authed user.
@@ -464,7 +466,7 @@ function leaguerunner_create_drupal_account($name, $userinfo, $edit = array())
 
 	// TODO: must have Field module configured with a field_fullname.
 	// should this module force in its own field name?
-	$edit['field_fullname'] = array( 'und' => array( '0' => array('value' => $fullname )));
+	$edit['field_fullname'] = array( LANGUAGE_NONE => array( '0' => array('value' => $fullname )));
 	$edit['status'] = 1;
 
 	// save 'init' data to know the origin of the leaguerunner authentication provisioned account
@@ -491,7 +493,7 @@ function leaguerunner_update_drupal_account($account, $userinfo, $edit = array()
 	// TODO: must have Field module configured with a field_fullname.
 	// should this module force in its own field name?
 	$fullname = $userinfo->firstname . ' ' . $userinfo->lastname;
-	$edit['field_fullname'] = array( 'und' => array( '0' => array('value' => $fullname )));
+	$edit['field_fullname'] = array( LANGUAGE_NONE => array( '0' => array('value' => $fullname )));
 
 	if (!$account = user_save( $account, $edit)) {
 		drupal_set_message(t('User account update failed because of system problems.'), 'error');
