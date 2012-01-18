@@ -477,6 +477,9 @@ function leaguerunner_create_drupal_account($name, $userinfo, $edit = array())
 		drupal_set_message(t('User account creation failed because of system problems.'), 'error');
 		return FALSE;
 	}
+
+	user_set_authmaps($account, array('authname_leaguerunner_authentication' => $name));
+
 	return $account;
 }
 
