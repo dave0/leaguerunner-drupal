@@ -393,6 +393,21 @@ function leaguerunner_authentication_user_login_authenticate_validate($form, &$f
 		return FALSE;
 	}
 	if( $xmlObj->auth->status != 'ok' ) {
+		if( $xmlObj->auth->reactivate ) {
+			$_GET['destination'] = null;  # drupal_goto() gives $_GET var precedence, so kill it
+			drupal_goto( _leaguerunner_url('person/activate') );
+		}
+
+		if( $xmlObj->auth->needwaiver ) {
+			$_GET['destination'] = null;  # drupal_goto() gives $_GET var precedence, so kill it
+			drupal_goto( _leaguerunner_url('person/signwaiver') );
+		}
+
+		if( $xmlObj->auth->needdogwaiver ) {
+			$_GET['destination'] = null;  # drupal_goto() gives $_GET var precedence, so kill it
+			drupal_goto( _leaguerunner_url('person/signdogwaiver') );
+		}
+
 		form_set_error('name', 'Login failed: ' . $xmlObj->auth->error);
 		return FALSE;
 	}
