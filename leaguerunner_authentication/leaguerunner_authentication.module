@@ -615,12 +615,12 @@ function leaguerunner_authentication_block_view ( $delta = '' )
 		case 'user_games':
 			if ($user->uid) {
 				$block['subject'] = 'Upcoming Games';
-				$block['content'] = '<iframe name="lr_block_iframe" id="lr_block_iframe" width="200" height="200" src="' . _leaguerunner_url('api/1/my/upcoming') . '" align="top" frameborder="0" scrolling="no"></iframe>';
+				$block['content'] = '<iframe name="lr_block_iframe" id="lr_block_iframe" onload="autoResize(\'lr_block_iframe\')" width="200" height="200" src="' . _leaguerunner_url('api/1/my/upcoming') . '" align="top" frameborder="0" scrolling="no"></iframe>';
 			}
 			break;
 		case 'games_today':
 			$block['subject'] = '';
-			$block['content'] = '<iframe name="games_iframe" id="games_iframe" width="400" height="50" src="' . _leaguerunner_url('api/1/schedule/gamestoday') . '" align="top" frameborder="0" scrolling="no"></iframe>';
+			$block['content'] = '<iframe allowtransparency="true" name="games_iframe" id="games_iframe" onload="autoResize(\'games_iframe\')" width="400" height="50" src="' . _leaguerunner_url('api/1/schedule/gamestoday') . '" align="top" frameborder="0" scrolling="no"></iframe>';
 			break;
 		default:
 			$block['content'] = t('No content available');
