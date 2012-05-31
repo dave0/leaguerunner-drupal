@@ -200,6 +200,9 @@ function leaguerunner_authentication_form_user_profile_form_alter(&$form, $form_
  */
 function leaguerunner_authentication_form_user_login_alter(&$form, &$form_state) {
 	_leaguerunner_authentication_login_form_alter($form, $form_state, 'user_login');
+
+	# Also, add appropriate links
+	$form['links']['#markup'] = theme('leaguerunner_authentication_user_login_block_links');
 }
 
 /**
