@@ -102,7 +102,7 @@ function leaguerunner_authentication_info($field = 0)
  *
  * @param object $user
  * @return boolean
- *    true if user is recorded as leaguerunner authenticated and identified 
+ *    true if user is recorded as leaguerunner authenticated and identified
  */
 function leaguerunner_authentication_leaguerunner_authenticated($user)
 {
@@ -584,14 +584,14 @@ function leaguerunner_authentication_user_logout($account)
 	return TRUE;
 }
 
-/** 
+/**
  * Blocks
  */
 
 /**
  * Implements hook_block_info()
  */
-function leaguerunner_authentication_block_info() 
+function leaguerunner_authentication_block_info()
 {
 	$blocks['user_games'] = array(
 		'info' => t("Sidebar block for logged-in user's upcoming games"),
@@ -610,7 +610,7 @@ function leaguerunner_authentication_block_info()
  */
 function leaguerunner_authentication_block_view ( $delta = '' )
 {
-	global $user; 
+	global $user;
 
 	$block = array();
 
@@ -635,7 +635,7 @@ function leaguerunner_authentication_block_view ( $delta = '' )
 /**
  * Display the full name and not the username
  */
-function leaguerunner_authentication_username_alter ( &$name, $account ) 
+function leaguerunner_authentication_username_alter ( &$name, $account )
 {
 	if( empty($account->uid) ) {
 		// Don't alter anonymous
